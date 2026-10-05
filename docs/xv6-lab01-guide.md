@@ -668,6 +668,45 @@ Kiểm tra:
 
 Luôn bỏ qua entry tên "." và "..", đồng thời ghép path con vào buffer có kích thước giới hạn.
 
+### Lỗi incompatible-pointer-types với rwsbrk
+
+Dấu hiệu:
+
+~~~text
+user/usertests.c:...: error: initialization of
+void (*)(char *) from incompatible pointer type void (*)(void)
+...
+{rwsbrk, "rwsbrk" },
+~~~
+
+Đây là lỗi compiler trong user/usertests.c. make qemu chưa chạy QEMU ở thời điểm này. Bảng quicktests yêu cầu mỗi test có dạng hàm nhận một tham số char *, nhưng hàm rwsbrk đang được khai báo không có tham số.
+
+Mở user/usertests.c và sửa khai báo:
+
+~~~c
+void
+rwsbrk(char *s)
+{
+~~~
+
+Giữ nguyên bảng quicktests và không xóa test. Tham số s có thể không được sử dụng trong thân hàm; điều đó không gây ra lỗi này.
+
+Sau đó build lại:
+
+~~~bash
+make clean
+make qemu
+~~~
+
+Nếu file đã có rwsbrk(char *s) nhưng vẫn gặp lỗi, kiểm tra source có bị trộn giữa hai phiên bản không:
+
+~~~bash
+git diff -- user/usertests.c
+git status
+~~~
+
+docs/fix-qemu.txt không sửa được lỗi này; tài liệu đó chỉ xử lý lỗi QEMU sau khi compiler đã build thành công. Các lệnh apt trong file đó cũng dành cho Ubuntu/WSL, không dùng trực tiếp trên macOS.
+
 ### QEMU không khởi động
 
 Kiểm tra:
