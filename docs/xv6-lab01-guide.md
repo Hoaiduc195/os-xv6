@@ -56,7 +56,48 @@ riscv64-linux-gnu-gcc --version
 
 Tên compiler có thể khác giữa các bản xv6. Nếu make báo không tìm thấy compiler, mở Makefile để xem giá trị TOOLPREFIX rồi kiểm tra đúng tên executable tương ứng.
 
-### 2.3. Tải source xv6
+### 2.3. Cài trực tiếp trên macOS
+
+macOS không cần WSL. Mở Terminal và cài các công cụ developer:
+
+~~~bash
+xcode-select --install
+~~~
+
+Cài Homebrew nếu máy chưa có:
+
+~~~bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+~~~
+
+Cài RISC-V toolchain và QEMU:
+
+~~~bash
+brew tap riscv/riscv
+brew install riscv-tools
+brew install qemu
+~~~
+
+Trên Mac Intel, Homebrew thường dùng prefix /usr/local; trên Apple Silicon, prefix thường là /opt/homebrew. Thêm thư mục toolchain vào PATH theo prefix thực tế của Homebrew:
+
+~~~bash
+echo 'export PATH="$(brew --prefix riscv-gnu-toolchain)/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+~~~
+
+Kiểm tra:
+
+~~~bash
+qemu-system-riscv64 --version
+which riscv64-unknown-elf-gcc
+which riscv64-linux-gnu-gcc
+~~~
+
+Chỉ cần ít nhất một compiler RISC-V xuất hiện và phải khớp với TOOLPREFIX trong Makefile. Nếu Homebrew không cài được toolchain hoặc QEMU trên máy cụ thể, dùng Ubuntu trong máy ảo là phương án dự phòng.
+
+### 2.4. Tải source xv6
+
+Trên Windows/WSL:
 
 ~~~bash
 cd /mnt/d
@@ -66,9 +107,18 @@ git clone git://g.csail.mit.edu/xv6-labs-2024
 cd xv6-labs-2024
 ~~~
 
+Trên macOS:
+
+~~~bash
+mkdir -p ~/HDH
+cd ~/HDH
+git clone git://g.csail.mit.edu/xv6-labs-2024
+cd xv6-labs-2024
+~~~
+
 Nếu giao thức git:// không hoạt động, dùng source hoặc URL do giảng viên cung cấp; không tự đổi sang một branch xv6 khác vì tên file và test có thể khác nhau.
 
-### 2.4. Build lần đầu
+### 2.5. Build lần đầu
 
 ~~~bash
 make clean
@@ -647,4 +697,5 @@ Người thực hiện nên đạt đủ các điểm sau:
 - docs/CQ_Lab01.docx — yêu cầu Lab 01 và output mẫu.
 - docs/book-xv6-riscv-rev4.pdf — mô tả interface, process, file descriptor, pipe và file system của xv6.
 - docs/fix-qemu.txt — hướng dẫn xử lý QEMU.
+- MIT 6.1810 Tools: <https://pdos.csail.mit.edu/6.1810/2024/tools.html>
 - MIT xv6 utilities lab: <https://pdos.csail.mit.edu/6.1810/2024/labs/util.html>
