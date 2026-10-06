@@ -1,0 +1,16 @@
+# Disk images & binaries
+*.iso
+*.img
+*.bin
+*.vdi
+*.vmdk
+*.qcow2
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.swp
