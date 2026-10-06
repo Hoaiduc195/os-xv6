@@ -7,6 +7,9 @@
 *.qcow2
 
 # Editor & OS files
+# Local VS Code tasks (VS Code reads tasks.json)
+.vscode/task.json
+.vscode/tasks.json
 .vscode/
 .idea/
 .DS_Store
