@@ -313,6 +313,32 @@ Kết thúc chương trình kiểm thử có dòng `ALL CP TESTS PASSED`. Không
 
 **Câu hỏi vấn đáp tiếp theo:** Khi đích cũ dài 1.200 byte và nguồn chỉ dài 7 byte, O_TRUNC giúp tránh lỗi gì?
 
+**Trả lời thực tế của người học:**
+
+> gúp xác định nguồn và đích nằm ở cùng 1 file
+
+**Nhận xét:** Người học nhớ đến việc kiểm tra cùng file, nhưng gán nhầm chức năng cho O_TRUNC. Kiểm tra cùng file dùng dev và ino; O_TRUNC xóa nội dung cũ của file thường khi mở đích.
+
+**Đáp án tham khảo và ví dụ:** Với đích cũ 1.200 byte, nếu mở để ghi mà không truncate, ghi 7 byte từ đầu chỉ thay 7 byte đầu; 1.193 byte đuôi cũ vẫn còn. O_TRUNC đưa kích thước về 0 khi mở, sau đó ghi 7 byte thì file đích dài đúng 7 byte. Trong kernel/sysfile.c, sys_open() gọi itrunc(ip) khi có cờ O_TRUNC và inode là T_FILE.
+
+Hai đoạn trong cp.c làm hai việc riêng:
+
+```c
+// Phát hiện cùng file, kể cả hai tên là hard link.
+if(srcstat.dev == dststat.dev && srcstat.ino == dststat.ino){
+  // Báo lỗi và thoát trước khi mở đích để truncate.
+}
+
+// Xóa nội dung đích cũ để bản sao không còn phần đuôi thừa.
+dstfd = open(argv[2], O_CREATE | O_WRONLY | O_TRUNC);
+```
+
+**Kết luận kỹ thuật:** Kiểm tra cùng file trước để bảo vệ nguồn; truncate sau để ghi đè đúng nội dung. O_TRUNC không tự phát hiện hoặc bảo vệ trường hợp cùng file. Chưa xác nhận người học đã phân biệt được hai thao tác.
+
+**Kiểm chứng:** Đối chiếu thêm sys_open() trong kernel/sysfile.c. Không chạy test mới ở lượt này; kết quả QEMU của lượt trước giữ nguyên.
+
+**Câu hỏi củng cố:** Nếu bỏ O_TRUNC và chép nguồn 7 byte lên đích cũ 1.200 byte, file đích sẽ dài bao nhiêu byte sau khi ghi thành công? Phần dữ liệu thừa đến từ đâu?
+
 **Trả lời của người học:** Chưa có.
 
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
