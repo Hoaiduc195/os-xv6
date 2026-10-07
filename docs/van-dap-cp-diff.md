@@ -15,7 +15,7 @@ Tài liệu này ghi lại nội dung trao đổi liên quan đến hai bài dư
 - Đã đọc yêu cầu và giới thiệu file descriptor, buffer, read().
 - Đã đặt câu hỏi về sao chép file 1.200 byte bằng buffer 512 byte.
 - Người học đã trả lời; đã ghi nhận phần sửa về EOF và số byte cần ghi. Đang chờ trả lời câu hỏi củng cố bên dưới.
-- Đã tạo user/cp.c nhưng file trên đĩa còn rỗng ở lần kiểm tra gần nhất; đã hướng dẫn khung kiểm tra đối số. Chưa triển khai xong hoặc kiểm thử cp và diff.
+- Đã viết user/cp.c theo yêu cầu mới và build thành công; chưa chạy kiểm thử cp trong QEMU. Chưa triển khai diff.
 - Các câu hỏi nâng cao bên dưới là nội dung chuẩn bị cho những buổi tiếp theo.
 
 ## 2. Yêu cầu theo đề
@@ -260,6 +260,29 @@ return -1;
 **Trả lời của người học:** Chưa có.
 
 **Kiểm chứng:** user/cp.c đã tồn tại nhưng nội dung trên đĩa còn rỗng lúc kiểm tra. Chưa build hoặc chạy test; các đoạn trên là mã hướng dẫn. Không thay đổi hoặc commit cp.c và Makefile.
+
+
+### Triển khai cp theo yêu cầu ngày 07/10/2026
+
+**Yêu cầu thực tế của người học:**
+
+> code cp.c dựa trên file tôi đan glafm
+
+File cp.c trên đĩa vẫn rỗng khi kiểm tra. Đã viết chương trình dựa trên khung đã học: kiểm tra argc, mở nguồn O_RDONLY, fstat để xác nhận file thường, kiểm tra đích cùng dev/ino trước khi truncate, mở đích O_CREATE | O_WRONLY | O_TRUNC, sao chép bằng buffer 512 byte, đóng descriptor và trả mã thoát. Đích đã tồn tại cũng phải là file thường. Báo lỗi nếu đọc thất bại hoặc ghi không đủ n byte. Trong kernel/file.c của bản xv6 này, filewrite() với file thường trả n hoặc -1; cách kiểm tra `write(...) != n` phù hợp với hành vi đó.
+
+**Kết quả kiểm tra thực tế:**
+
+- `make user/_cp` thất bại vì Makefile không tự nhận diện prefix toolchain cài trên máy.
+- `make TOOLPREFIX=riscv64-elf- user/_cp` thành công, tạo executable user/_cp.
+- Chưa chạy test hành vi trong QEMU; chưa đánh dấu trường hợp sao chép nào là đã đạt.
+- Giữ nguyên Makefile. Chưa thêm cp vào UPROGS; cần bổ sung khi đến bước chạy trong xv6.
+- Chỉ commit nhật ký; cp.c giữ ở working tree để người học tiếp tục làm.
+
+**Giới hạn:** Kiểm tra cùng inode và mở đích là hai thao tác riêng, không bảo vệ trước tiến trình khác đồng thời thay đổi đường dẫn đích. Nếu lỗi xảy ra sau khi truncate hoặc đang ghi, file đích có thể chỉ chứa một phần dữ liệu.
+
+**Câu hỏi đọc code tiếp theo:** Vì sao phải kiểm tra nguồn và đích có cùng inode trước khi mở đích với O_TRUNC?
+
+**Trả lời của người học:** Chưa có.
 
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
