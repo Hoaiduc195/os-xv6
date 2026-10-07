@@ -8,11 +8,13 @@ Phần phụ trách: **cp và diff**.
 
 Cách học đã thống nhất: hiểu yêu cầu → thiết kế → viết code → kiểm thử → vấn đáp. Mục tiêu là giải thích được từng thao tác, dự đoán kết quả và tự tìm lỗi.
 
+Từ ngày 07/10/2026: giải thích lý thuyết cùng từng đoạn mã cụ thể, đối chiếu mã nguồn xv6; vẫn học từng phần nhỏ và hỏi lại để kiểm tra hiểu bài.
+
 Tài liệu này ghi lại nội dung trao đổi liên quan đến hai bài dưới dạng biên tập, không phải bản chép nguyên văn toàn bộ cuộc trò chuyện. Những câu trả lời tham khảo bổ sung bên dưới không phải câu trả lời của người học.
 
 - Đã đọc yêu cầu và giới thiệu file descriptor, buffer, read().
 - Đã đặt câu hỏi về sao chép file 1.200 byte bằng buffer 512 byte.
-- Người học chưa trả lời câu hỏi đó.
+- Người học đã trả lời; đã ghi nhận phần sửa về EOF và số byte cần ghi. Đang chờ trả lời câu hỏi củng cố bên dưới.
 - Chưa triển khai hoặc kiểm thử cp và diff trong phiên học này.
 - Các câu hỏi nâng cao bên dưới là nội dung chuẩn bị cho những buổi tiếp theo.
 
@@ -109,14 +111,20 @@ read() không tự thêm ký tự kết thúc chuỗi '\0'. Dữ liệu file có
 7. Lặp đến EOF.
 8. Đóng các descriptor đã mở và kết thúc.
 
-### Câu hỏi đang chờ người học trả lời
+### Trao đổi ngày 07/10/2026 — read(), EOF và số byte cần ghi
 
 > File nguồn có 1.200 byte, buffer có 512 byte. Giả sử mỗi lần đọc lấy đủ dữ liệu còn có thể lấy, các lần read() trả về những giá trị nào, kể cả lần báo EOF? Vì sao không được luôn ghi 512 byte sau mỗi lần đọc?
 
-**Trả lời của người học:** Chưa có.
+**Trả lời thực tế của người học:**
+
+> Câu 1: Lần gọi 1 trả ra 512, lần gọi 2 trả ra 512 và lần 3 trả ra EOF cùng với dừng.
+>
+> Câu 2: Việc luôn gọi Write làm tăng gấp đôi số lần đọc/ghi vào ổ đĩa ảo QEMU một cách vô ích.
+
+**Nhận xét:** Hai lần đọc đầu đúng. Lần thứ ba vẫn còn 176 byte để đọc, nên chưa trả về 0. Câu 2 chưa đúng: cp cần ghi dữ liệu đã đọc sang file đích. Vấn đề là số byte truyền cho write(), không phải việc gọi write() tự nó vô ích. Đổi đối số từ n thành 512 không tự làm tăng gấp đôi số lần gọi. Số syscall cũng không tương ứng một-một với số thao tác ổ đĩa, vì xv6 có buffer cache và cơ chế log.
 
 <details>
-<summary>Đáp án tham khảo — mở sau khi tự trả lời</summary>
+<summary>Đáp án tham khảo và kết luận kỹ thuật</summary>
 
 Các kết quả lần lượt: **512, 512, 176, 0**.
 
@@ -127,6 +135,45 @@ Nếu luôn ghi 512 byte ở lần đọc được 176 byte, chương trình ghi
 Khi đọc được n byte, cần chuyển đủ n byte đó trước khi đọc tiếp. Không ghi dữ liệu khi n bằng 0 hoặc âm.
 
 </details>
+
+**Đối chiếu mã nguồn thực tế:** `xv6-labs-2024/user/cat.c` dùng đúng mẫu sau (trích đoạn):
+
+```c
+while((n = read(fd, buf, sizeof(buf))) > 0) {
+  if (write(1, buf, n) != n) {
+    fprintf(2, "cat: write error\n");
+    exit(1);
+  }
+}
+if(n < 0){
+  fprintf(2, "cat: read error\n");
+  exit(1);
+}
+```
+
+Ở cat, descriptor 1 là đầu ra chuẩn. Với cp, ý tưởng tương ứng là `write(dstfd, buf, n)`, với dstfd là descriptor file đích đã mở. Đây chỉ là phần đọc/ghi để học, chưa phải chương trình cp hoàn chỉnh. Điều kiện `> 0` cho phép xử lý cả lần đọc được 176 byte; khi n == 0 thì thoát vòng lặp, còn n < 0 được báo lỗi riêng.
+
+Trong `kernel/file.c`, fileread() tăng vị trí đọc `f->off` thêm số byte thực sự đọc được. Trong `kernel/fs.c`, readi() giới hạn số byte bằng phần còn lại:
+
+```c
+if(off + n > ip->size)
+  n = ip->size - off;
+```
+
+Với file ổn định 1.200 byte, lần ba bắt đầu ở offset 1.024 nên đọc 176 byte. Lần bốn bắt đầu ở offset 1.200 nên đọc 0 byte. EOF không phải một byte đặc biệt được chép vào buffer. `kernel/bio.c` cũng cho thấy bread() chỉ gọi đọc ổ đĩa khi block trong cache chưa hợp lệ.
+
+**Ví dụ lỗi:** Nếu file đích ban đầu rỗng và ba lần ghi đều thành công với 512 byte, đích dài 1.536 byte thay vì 1.200 byte. Ở lần cuối, chỉ `buf[0]` đến `buf[175]` là dữ liệu mới; `buf[176]` đến `buf[511]` còn dữ liệu cũ từ lần đọc trước.
+
+**Kết luận để ghi nhớ:** read() trả về số byte vừa đọc; ghi đúng số byte đó. Đọc được ít hơn kích thước buffer vẫn phải xử lý dữ liệu; với yêu cầu đọc dương, giá trị 0 mới báo EOF. Chưa xác nhận người học đã nắm vững phần sửa, cần trả lời câu hỏi củng cố.
+
+**Kiểm chứng:** Đã đọc mã nguồn cat.c, file.c, fs.c và bio.c. Chưa biên dịch hoặc chạy test cho phần này; các con số trên là phân tích lý thuyết, không phải kết quả test đã đạt.
+
+### Câu hỏi củng cố đang chờ người học trả lời
+
+1. Trong đoạn code trên, lần read() trả về 176 thì có vào thân vòng while không? Với cp, lệnh ghi lúc đó phải là gì?
+2. Nếu thay điều kiện `> 0` bằng `== sizeof(buf)`, file nguồn 1.200 byte sẽ được sao chép bao nhiêu byte (giả sử mọi lần ghi thành công)? Vì sao?
+
+**Trả lời của người học:** Chưa có.
 
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
