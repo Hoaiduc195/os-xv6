@@ -233,6 +233,30 @@ close(srcfd);
 1. Nếu gõ `cp a` và file a thực sự tồn tại, lệnh đã đủ đối số chưa? Thiếu gì?
 2. Vì sao kiểm tra `srcfd < 0` thay vì `srcfd <= 0`?
 
+**Trả lời thực tế của người học:**
+
+> 1. chưa đủ, thiếu đích để sao chép. 2. loại trước hợp có đối số.
+
+**Nhận xét:** Câu 1 đúng, đã phân biệt được file nguồn tồn tại với việc đủ đối số. Câu 2 chưa đúng: srcfd không biểu thị số lượng hoặc sự tồn tại của đối số; đó là kết quả open().
+
+**Đáp án tham khảo:** argc là số phần tử của danh sách đối số, còn srcfd là descriptor dùng để truy cập file đã mở. open() trả về số không âm khi thành công và -1 khi thất bại trong xv6. Giá trị 0 cũng là descriptor hợp lệ, nên `srcfd <= 0` sẽ báo lỗi nhầm khi open() thành công với descriptor 0. Khi 0, 1, 2 đang được dùng và 3 còn trống, open() thường nhận descriptor 3; nếu slot 0 đang trống, nó có thể nhận 0.
+
+**Đối chiếu mã nguồn:** `xv6-labs-2024/kernel/sysfile.c`, fdalloc() duyệt từ fd = 0, gán file vào slot trống đầu tiên rồi trả về fd; nếu không còn slot thì trả về -1:
+
+```c
+for(fd = 0; fd < NOFILE; fd++){
+  if(p->ofile[fd] == 0){
+    p->ofile[fd] = f;
+    return fd;
+  }
+}
+return -1;
+```
+
+**Kết luận:** Đã xác nhận hiểu yêu cầu có đường dẫn đích. Cần củng cố sự khác nhau giữa argc và srcfd trước khi viết tiếp phần mở đích.
+
+**Câu hỏi củng cố đang chờ:** Giả sử open() lần lượt trả về -1, 0 và 3. Trường hợp nào báo lỗi, trường hợp nào mở thành công? Điều kiện `srcfd <= 0` nhận định sai trường hợp nào?
+
 **Trả lời của người học:** Chưa có.
 
 **Kiểm chứng:** user/cp.c đã tồn tại nhưng nội dung trên đĩa còn rỗng lúc kiểm tra. Chưa build hoặc chạy test; các đoạn trên là mã hướng dẫn. Không thay đổi hoặc commit cp.c và Makefile.
