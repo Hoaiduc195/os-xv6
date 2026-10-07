@@ -15,7 +15,7 @@ Tài liệu này ghi lại nội dung trao đổi liên quan đến hai bài dư
 - Đã đọc yêu cầu và giới thiệu file descriptor, buffer, read().
 - Đã đặt câu hỏi về sao chép file 1.200 byte bằng buffer 512 byte.
 - Người học đã trả lời; đã ghi nhận phần sửa về EOF và số byte cần ghi. Đang chờ trả lời câu hỏi củng cố bên dưới.
-- Chưa triển khai hoặc kiểm thử cp và diff trong phiên học này.
+- Đã tạo user/cp.c nhưng file trên đĩa còn rỗng ở lần kiểm tra gần nhất; đã hướng dẫn khung kiểm tra đối số. Chưa triển khai xong hoặc kiểm thử cp và diff.
 - Các câu hỏi nâng cao bên dưới là nội dung chuẩn bị cho những buổi tiếp theo.
 
 ## 2. Yêu cầu theo đề
@@ -168,12 +168,74 @@ Với file ổn định 1.200 byte, lần ba bắt đầu ở offset 1.024 nên 
 
 **Kiểm chứng:** Đã đọc mã nguồn cat.c, file.c, fs.c và bio.c. Chưa biên dịch hoặc chạy test cho phần này; các con số trên là phân tích lý thuyết, không phải kết quả test đã đạt.
 
-### Câu hỏi củng cố đang chờ người học trả lời
+### Câu hỏi củng cố về read() — tạm để ôn lại
 
 1. Trong đoạn code trên, lần read() trả về 176 thì có vào thân vòng while không? Với cp, lệnh ghi lúc đó phải là gì?
 2. Nếu thay điều kiện `> 0` bằng `== sizeof(buf)`, file nguồn 1.200 byte sẽ được sao chép bao nhiêu byte (giả sử mọi lần ghi thành công)? Vì sao?
 
 **Trả lời của người học:** Chưa có.
+
+### Trao đổi ngày 07/10/2026 — tự viết cp: kiểm tra đối số
+
+**Câu hỏi:**
+
+1. Vì sao dùng `argc != 3` thay vì `argc < 3`?
+2. Nếu người dùng chỉ gõ `cp a`, vì sao phải kiểm tra đối số trước khi mở `argv[2]`?
+
+**Trả lời thực tế của người học:**
+
+> 1. Vì lệnh copy cần chính xác 3 giá trị đầu vào. 2. kiểm trả tính hợp lệ của a.
+
+**Nhận xét và đáp án tham khảo:**
+
+- Câu 1 đúng về số lượng. Nói chính xác: argc tính cả tên chương trình; `cp a b` có 3 phần tử, gồm tên lệnh và 2 đối số đường dẫn. `argc != 3` từ chối cả thiếu lẫn thừa đối số, còn `argc < 3` vẫn chấp nhận `cp a b c` dù chương trình chưa hỗ trợ cú pháp đó.
+- Câu 2 chưa đúng. Với `cp a`, argc bằng 2, argv[1] là "a" nhưng argv[2] là con trỏ null kết thúc danh sách đối số, không phải đường dẫn đích. Kiểm tra argc bảo đảm đủ đối số trước khi sử dụng chúng. Kiểm tra file a có mở để đọc được hay không là bước gọi open() và kiểm tra kết quả sau đó.
+
+**Mã khung đã hướng dẫn, chưa xác nhận được nhập vào file:**
+
+```c
+#include "kernel/types.h"
+#include "kernel/fcntl.h"
+#include "user/user.h"
+
+int
+main(int argc, char *argv[])
+{
+  if(argc != 3){
+    fprintf(2, "Usage: cp src dst\n");
+    exit(1);
+  }
+
+  // Phần tiếp theo: mở file nguồn.
+  exit(0);
+}
+```
+
+**Kết luận kỹ thuật:** Kiểm tra cú pháp trước, mở file sau. Số lượng đối số hợp lệ chưa chứng minh file nguồn tồn tại hoặc mở được. Chưa xác nhận người học đã hiểu phần sửa câu 2.
+
+**Bước tiếp theo — chèn sau kiểm tra argc:**
+
+```c
+int srcfd = open(argv[1], O_RDONLY);
+if(srcfd < 0){
+  fprintf(2, "cp: cannot open %s\n", argv[1]);
+  exit(1);
+}
+
+// Tạm đóng nguồn khi chưa viết phần sao chép.
+close(srcfd);
+```
+
+Đây vẫn là chương trình đang xây dựng, chưa sao chép dữ liệu. O_RDONLY mở nguồn chỉ để đọc. open() trả descriptor không âm khi thành công, giá trị âm khi thất bại; descriptor 0 cũng có thể hợp lệ. Khi viết phần sao chép, chuyển close(srcfd) xuống sau khi dùng xong nguồn.
+
+**Câu hỏi tiếp theo:**
+
+1. Nếu gõ `cp a` và file a thực sự tồn tại, lệnh đã đủ đối số chưa? Thiếu gì?
+2. Vì sao kiểm tra `srcfd < 0` thay vì `srcfd <= 0`?
+
+**Trả lời của người học:** Chưa có.
+
+**Kiểm chứng:** user/cp.c đã tồn tại nhưng nội dung trên đĩa còn rỗng lúc kiểm tra. Chưa build hoặc chạy test; các đoạn trên là mã hướng dẫn. Không thay đổi hoặc commit cp.c và Makefile.
 
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
