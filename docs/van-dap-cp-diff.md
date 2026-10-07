@@ -15,7 +15,7 @@ Tài liệu này ghi lại nội dung trao đổi liên quan đến hai bài dư
 - Đã đọc yêu cầu và giới thiệu file descriptor, buffer, read().
 - Đã đặt câu hỏi về sao chép file 1.200 byte bằng buffer 512 byte.
 - Người học đã trả lời; đã ghi nhận phần sửa về EOF và số byte cần ghi. Đang chờ trả lời câu hỏi củng cố bên dưới.
-- Đã viết user/cp.c theo yêu cầu mới và build thành công; chưa chạy kiểm thử cp trong QEMU. Chưa triển khai diff.
+- Đã viết user/cp.c, build và chạy kiểm thử QEMU thành công cho các trường hợp được ghi bên dưới. Chưa triển khai diff.
 - Các câu hỏi nâng cao bên dưới là nội dung chuẩn bị cho những buổi tiếp theo.
 
 ## 2. Yêu cầu theo đề
@@ -284,6 +284,37 @@ File cp.c trên đĩa vẫn rỗng khi kiểm tra. Đã viết chương trình d
 
 **Trả lời của người học:** Chưa có.
 
+
+### Kiểm thử cp bằng QEMU ngày 07/10/2026
+
+**Yêu cầu thực tế của người học:**
+
+> Chạy test thử bằng qemu và sửa
+
+Đã sao chép cây xv6 vào thư mục tạm, build kernel và tạo fs.img riêng bằng toolchain `riscv64-elf-`. Thêm cp và chương trình cptest vào image thử nghiệm bằng test.mk riêng. Không sửa Makefile hoặc fs.img trong workspace. Chương trình kiểm thử gọi cp qua fork/exec, kiểm tra mã thoát bằng wait, đọc lại từng byte và kiểm tra kích thước bằng fstat. Dữ liệu có byte 0, tạo theo quy luật i % 251.
+
+**Các ca đã chạy và đạt trong QEMU:**
+
+- Sao chép nguồn dài 0, 7, 512, 1.024, 1.200 và 4.097 byte sang đích mới: đúng mọi byte, kích thước và EOF; nguồn giữ nguyên.
+- Ghi đè đích 1.200 byte bằng nguồn 7 byte: đích còn đúng 7 byte.
+- Nguồn rỗng ghi đè đích có dữ liệu: đích còn 0 byte.
+- Đóng descriptor 0 trước exec để open nguồn nhận descriptor 0: sao chép thành công.
+- Thiếu/thừa đối số: mã thoát 1.
+- Nguồn không tồn tại: mã thoát 1, đích có sẵn giữ nguyên nội dung.
+- Cùng đường dẫn và hard link đến cùng inode: mã thoát 1, nội dung nguồn và alias được bảo toàn.
+- Nguồn hoặc đích là thư mục: mã thoát 1; file dữ liệu liên quan giữ nguyên.
+- Đường dẫn đích có thư mục cha không tồn tại: mã thoát 1, nguồn giữ nguyên.
+
+Kết thúc chương trình kiểm thử có dòng `ALL CP TESTS PASSED`. Không phát hiện lỗi trong cp.c qua các ca trên, nên không sửa mã chỉ để tạo thay đổi. Lần tạo image thử nghiệm đầu thiếu executable cptest; đã build executable rồi tạo lại image tạm trước khi chạy QEMU thành công. Đây là lỗi thiết lập test, không phải lỗi cp.
+
+**Chưa kiểm thử:** lỗi đọc giữa chừng, ghi lỗi/hết dung lượng, thay đổi đường dẫn đồng thời. Không suy rộng kết quả sang các trường hợp này. Makefile workspace vẫn chưa có `_cp` trong UPROGS, nên chạy QEMU trực tiếp ở workspace cần bổ sung mục này ở bước tích hợp.
+
+**Bằng chứng phiên chạy:** log `/tmp/xv6-cp-qemu.log`; đường dẫn cây thử nghiệm lưu tại `/tmp/xv6-cp-test-path`. Đây là file tạm trên máy, không được đưa vào Git.
+
+**Câu hỏi vấn đáp tiếp theo:** Khi đích cũ dài 1.200 byte và nguồn chỉ dài 7 byte, O_TRUNC giúp tránh lỗi gì?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
@@ -368,7 +399,7 @@ Không giả định echo hỗ trợ -e: user/echo.c trong bản đã kiểm tra
 
 ## 6. Checklist kiểm thử dự kiến
 
-Các trường hợp dưới đây **chưa được chạy trong phiên học**.
+Danh sách dưới đây là checklist tổng thể. Các ca cp đã thực sự chạy được ghi trong nhật ký kiểm thử QEMU ở mục 3; những ca không được ghi là đạt vẫn chưa được xác nhận. Toàn bộ ca diff chưa chạy.
 
 ### cp
 
