@@ -484,6 +484,28 @@ if(c == '\n'){
 
 **Trả lời của người học:** Chưa có.
 
+
+### Ngày 08/10/2026 — short-circuit khi so sánh dòng
+
+**Câu hỏi:** Trong biểu thức `line1.len != line2.len || memcmp(line1.data, line2.data, line1.len) != 0`, nếu len1 = 2 và len2 = 3, memcmp có được gọi không? Vì sao?
+
+**Trả lời thực tế của người học:**
+
+> Không, `memcmp` không được gọi.
+> Với `len1 = 2`, `len2 = 3`, biểu thức `len1 == len2` là `2 == 3`, tức **sai (0)**. Toán tử `&&` trong C đánh giá từ trái sang phải và **đánh giá rút gọn (short-circuit)**: nếu vế trái đã sai thì kết quả cả biểu thức chắc chắn là sai, nên vế phải (`memcmp(...) == 0`) bị bỏ qua hoàn toàn, không được thực thi.
+
+**Nhận xét:** Kết luận đúng và hiểu đúng short-circuit của &&, nhưng đã đổi biểu thức được hỏi. Code hiện tại dùng != và || để kiểm tra khác nhau, không dùng == và && để kiểm tra bằng nhau.
+
+**Đáp án tham khảo theo đúng code:** `2 != 3` là đúng. Với ||, chỉ cần vế trái đúng thì cả biểu thức đúng, nên bỏ qua memcmp. Nếu viết kiểm tra bằng nhau bằng `len1 == len2 && memcmp(a, b, len1) == 0`, cách giải thích của người học hoàn toàn đúng: vế trái sai nên && bỏ qua vế phải. Hai biểu thức biểu diễn hai kết quả đối lập (khác/bằng) khi vùng nhớ hợp lệ, đều không gọi memcmp khi độ dài khác nhau.
+
+**Kết luận:** Đã xác nhận hiểu cơ chế đánh giá rút gọn; cần bám đúng toán tử trong mã nguồn khi giải thích. Trước memcmp, code đầy đủ còn kiểm tra trạng thái có dòng và has_newline.
+
+**Kiểm chứng:** Đối chiếu lại biểu thức different trong diff.c. Không sửa mã nguồn hoặc chạy test mới.
+
+**Câu hỏi tiếp theo:** Nếu len của hai dòng đều bằng 3 nhưng has_newline lần lượt là 0 và 1, biểu thức different hiện tại có gọi memcmp không? Kết quả different là bao nhiêu?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
