@@ -15,7 +15,7 @@ Tài liệu này ghi lại nội dung trao đổi liên quan đến hai bài dư
 - Đã đọc yêu cầu và giới thiệu file descriptor, buffer, read().
 - Đã đặt câu hỏi về sao chép file 1.200 byte bằng buffer 512 byte.
 - Người học đã trả lời; đã ghi nhận phần sửa về EOF và số byte cần ghi. Đang chờ trả lời câu hỏi củng cố bên dưới.
-- Đã viết user/cp.c, build và chạy kiểm thử QEMU thành công cho các trường hợp được ghi bên dưới. Chưa triển khai diff.
+- Đã viết user/cp.c, build và chạy kiểm thử QEMU thành công cho các trường hợp được ghi bên dưới. Đã hoàn thiện diff và chạy 20 ca QEMU; xem nhật ký ngày 08/10/2026.
 - Các câu hỏi nâng cao bên dưới là nội dung chuẩn bị cho những buổi tiếp theo.
 
 ## 2. Yêu cầu theo đề
@@ -437,6 +437,35 @@ if(c == '\n'){
 
 **Trả lời của người học:** Chưa có.
 
+
+### Ngày 08/10/2026 — hoàn thiện diff.c
+
+**Trả lời thực tế của người học (trích các ý chính):**
+
+> Không giống hệt nhau.
+> Dòng có has_newline = True sẽ giữ nguyên ký tự xuống dòng (giá trị chuỗi là "ABC\n", độ dài 4).
+> Khi so sánh trực tiếp bằng toán tử ==, kết quả sẽ là False.
+> Lần gọi readline() thứ nhất: Giá trị trả về: "\n"; len: 1; has_newline: True.
+> Lần gọi readline() thứ hai: Giá trị trả về: ""; len: 0; has_newline: False.
+
+**Yêu cầu tiếp theo của người học:** “Code hoàn thiện file diff.c đi”.
+
+**Nhận xét và đáp án tham khảo:** Kết luận hai file không giống hệt là đúng. Nhưng giao diện hàm C đang viết khác mô tả của người học: cả hai data đều là ABC, len đều bằng 3; has_newline lần lượt 0/1. Hàm trả số trạng thái, không trả chuỗi. File chỉ chứa newline: lần đầu trả 1, len = 0, has_newline = 1; lần tiếp theo trả 0, len = 0, has_newline = 0. Trong C, == giữa hai con trỏ chuỗi so sánh địa chỉ, không so sánh nội dung; dùng memcmp theo độ dài cho dữ liệu có thể chứa byte 0.
+
+**Đã triển khai:** Hoàn thiện vòng lặp đọc hai dòng cùng thứ tự; so sánh trạng thái có dòng, len, has_newline và memcmp; xử lý một bên EOF; hai vị trí -q; kiểm tra file thường; tăng buffer cho dòng dài; đóng descriptor và free bộ nhớ. Output chi tiết theo path:line: < hoặc >; dòng không có newline được chú thích `\ No newline at end of file` để người đọc thấy nguyên nhân khác biệt. Thêm _diff vào UPROGS trong Makefile workspace, giữ nguyên _cp và cờ compiler riêng của người học.
+
+**Quy ước mã thoát của bản triển khai:** 0 giống nhau, 1 khác nhau, 2 lỗi. Đây là lựa chọn của bài làm, không phải yêu cầu bắt buộc của đề; cần nhóm thống nhất khi bàn giao.
+
+**Lỗi đã phát hiện và sửa bằng test:** Lần chạy đầu sai định dạng vì printf của bản xv6 này không hỗ trợ %c. Đã đổi dấu < và > sang chuỗi với %s, đối chiếu user/printf.c và chạy lại bộ test.
+
+**Kiểm thử thực tế:** Build/link user/_diff thành công. Chương trình difftest gọi diff qua fork/exec, thu stdout/stderr vào file, kiểm tra từng byte output và mã thoát. 20 ca QEMU đã đạt: cả hai rỗng; mẫu khác dòng và EOF; -q đầu/cuối in đúng một lần; giống nhau có dòng rỗng; -q với file giống nhau; giống nhau không newline cuối; chỉ khác newline cuối; file rỗng so với dòng rỗng; file thứ hai hết trước; dòng dài bằng nhau/khác nhau sau 1.200 byte; byte 0 bằng nhau/khác nhau và output giữ byte 0; cùng file; lỗi mở file thứ nhất/thứ hai; thư mục; thiếu đối số; option không hợp lệ. Log: /tmp/xv6-diff-qemu.log, kết thúc ALL DIFF TESTS PASSED. Dùng image tạm, không ghi đè fs.img workspace.
+
+**Giới hạn:** Chưa test trực tiếp WSL, lỗi malloc hoặc đầu ra hết dung lượng; printf của xv6 không trả trạng thái ghi nên lỗi ở phần nhãn/thông báo không được kiểm tra đầy đủ. Hàm đọc từng byte dễ hiểu nhưng có nhiều syscall. So sánh theo dòng cùng thứ tự, không tìm tập chỉnh sửa tối thiểu. Chưa commit/push mã nguồn diff hoặc tạo PR diff; chỉ nhật ký được commit trong lượt này.
+
+**Câu hỏi vấn đáp tiếp theo:** Vì sao phải kiểm tra hai độ dài bằng nhau trước khi gọi memcmp với độ dài của dòng thứ nhất?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
@@ -521,7 +550,7 @@ Không giả định echo hỗ trợ -e: user/echo.c trong bản đã kiểm tra
 
 ## 6. Checklist kiểm thử dự kiến
 
-Danh sách dưới đây là checklist tổng thể. Các ca cp đã thực sự chạy được ghi trong nhật ký kiểm thử QEMU ở mục 3; những ca không được ghi là đạt vẫn chưa được xác nhận. Toàn bộ ca diff chưa chạy.
+Danh sách dưới đây là checklist tổng thể. Các ca cp đã thực sự chạy được ghi trong nhật ký kiểm thử QEMU ở mục 3; những ca không được ghi là đạt vẫn chưa được xác nhận. Các ca diff đã chạy được ghi trong nhật ký hoàn thiện diff ở mục 3; không suy rộng sang ca chưa được kiểm chứng.
 
 ### cp
 
