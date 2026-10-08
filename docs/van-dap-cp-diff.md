@@ -341,6 +341,37 @@ dstfd = open(argv[2], O_CREATE | O_WRONLY | O_TRUNC);
 
 **Trả lời của người học:** Chưa có.
 
+
+### Ngày 08/10/2026 — diff: đối số và mở file
+
+**Câu hỏi:** Với `diff -q a b`, argc bằng bao nhiêu, argv nào chứa a và b? Nếu mở a thành công nhưng mở b thất bại, cần đóng descriptor nào?
+
+**Trả lời thực tế của người học:**
+
+> 1. argc bằng 4
+> - argv[2] chứa "a"
+> - argv[3] chứa "b"
+> Câu 2: Cần phải đóng descriptor của a trước.
+
+**Nhận xét:** Cả hai câu đúng. Đã xác nhận hiểu cách đếm đối số có -q và thu dọn descriptor mở thành công khi bước tiếp theo thất bại.
+
+**Đáp án tham khảo:** argv[0] là diff, argv[1] là -q, argv[2] là a và argv[3] là b. Nếu open(b) trả -1, đóng fd1 của a; không close(fd2) vì fd2 không phải descriptor hợp lệ.
+
+**Code bước 1:** Đã tạo user/diff.c với phân tích ba dạng cú pháp, kiểm tra option và mở hai file chỉ đọc. strcmp(..., "-q") == 0 mới nghĩa là hai chuỗi bằng nhau; không dùng == để so sánh nội dung chuỗi. Tên file bắt đầu bằng dấu - cần viết dạng ./name để phân biệt option. Khi file thứ hai không mở được, đóng file thứ nhất rồi thoát.
+
+Đây là khung học chưa hoàn chỉnh: chưa đọc dòng, kiểm tra loại file hoặc so sánh. Sau khi mở thành công, khung đóng hai file và báo `diff: comparison not implemented yet`, thoát 2 để không báo nhầm hai file giống nhau. quiet sẽ dùng khi triển khai so sánh; hiện có (void)quiet để tránh cảnh báo biến chưa dùng. Mã 2 cho lỗi là lựa chọn tạm của khung; đề chưa quy định mã thoát, cần thống nhất quy ước cuối cùng khi hoàn thiện.
+
+**Kiểm chứng:** `make TOOLPREFIX=riscv64-elf- user/_diff` build/link thành công. Chưa chạy diff trong QEMU và chưa có test so sánh nào đạt. Không thêm _diff vào UPROGS khi chương trình chưa hoàn chỉnh; không commit mã nguồn trong lượt này.
+
+**Bước tiếp theo — thiết kế đọc dòng:** Dự kiến hàm trả 1 khi lấy được một dòng, 0 khi EOF và không còn dữ liệu, -1 khi lỗi. Độ dài và trạng thái newline trả riêng để dòng rỗng không bị nhầm với EOF; vẫn phải xử lý dòng cuối không có newline. Đây là thiết kế, chưa phải code đã viết.
+
+**Câu hỏi đang chờ:**
+
+1. Với file chứa `\nABC\n`, lần đọc dòng đầu có phải EOF không? Vì sao?
+2. Với file chỉ chứa `ABC` không có newline cuối, khi gặp EOF có cần trả lại dòng ABC để so sánh không?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
