@@ -7,7 +7,7 @@ Cập nhật ngày 08/10/2026. Người phụ trách: Nguyễn Thành Bảo. Ph�
 
 Phiên vấn đáp đã kết thúc theo yêu cầu. Các mô tả bên dưới ghi lại từng giai đoạn; trạng thái cuối cùng là cp và diff đều đã được push vào nhánh feat/lab01-cp, [PR #1](https://github.com/Hoaiduc195/os-xv6/pull/1) chờ nhóm trưởng review, chưa merge. Commit bàn giao fb0ba0f; bộ test đã được lưu tại tests/lab01 trên nhánh code, không còn chỉ phụ thuộc các file tạm.
 
-Tài liệu công việc cần làm: docs/lab01-cp-diff-handoff.md trên nhánh code. Có hướng dẫn WSL, checklist review/tích hợp/báo cáo và giới hạn kiểm thử. Toàn bộ test cp/diff/readline đã chạy lại thành công trên QEMU macOS. Ubuntu CI đã khởi chạy; xem check PR để biết kết quả mới nhất. Chưa chạy trực tiếp Windows/WSL.
+Tài liệu công việc cần làm: docs/lab01-cp-diff-handoff.md trên nhánh code. Có hướng dẫn WSL, checklist review/tích hợp/báo cáo và giới hạn kiểm thử. Toàn bộ test cp/diff/readline đã chạy lại thành công trên QEMU macOS. Ubuntu 24.04 CI đã đạt build và toàn bộ test tại commit fb0ba0f: https://github.com/Hoaiduc195/os-xv6/actions/runs/37799657039. Chưa chạy trực tiếp Windows/WSL.
 
 File workflow này cùng nhật ký vấn đáp được commit/push riêng trên docs/van-dap-cp-diff để tự ôn. Không tiếp tục đặt câu hỏi trong phiên này.
 

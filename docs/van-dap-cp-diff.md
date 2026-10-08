@@ -9,7 +9,7 @@ Theo yêu cầu người học, đã kết thúc vấn đáp. Các câu đang ch
 
 Đã hoàn thiện cp/diff, thêm UPROGS và bàn giao vào [PR #1](https://github.com/Hoaiduc195/os-xv6/pull/1) trên nhánh feat/lab01-cp. Commit code fb0ba0f bổ sung diff, tests/lab01, Ubuntu CI và docs/lab01-cp-diff-handoff.md; cp có từ commit 61005c8. PR ghi rõ phần làm của Nguyễn Thành Bảo và checklist nhóm trưởng cần review, thử WSL, tích hợp và đóng gói bài nộp. Không merge vào main.
 
-Đã chạy lại bộ test được lưu trong repo: cp, 20 ca diff và 9 kiểm tra readline đều đạt trên QEMU macOS. Log /tmp/xv6-lab01-final-macos.log. Ubuntu CI đã được khởi chạy; kết quả cuối xem check PR. Chưa chạy trực tiếp trên WSL vì máy hiện tại là macOS. Không ghi WSL là đã đạt.
+Đã chạy lại bộ test được lưu trong repo: cp, 20 ca diff và 9 kiểm tra readline đều đạt trên QEMU macOS. Log /tmp/xv6-lab01-final-macos.log. Ubuntu 24.04 CI đã đạt build và toàn bộ test tại commit fb0ba0f: https://github.com/Hoaiduc195/os-xv6/actions/runs/37799657039. Chưa chạy trực tiếp trên WSL vì máy hiện tại là macOS. Không ghi WSL là đã đạt.
 
 Giữ nguyên các thay đổi chưa commit trong workspace, gồm cờ compiler riêng trong Makefile. Code đã push nằm trên nhánh tính năng trong worktree riêng; cp.c/diff.c vẫn có thể hiện untracked ở nhánh tài liệu vì không commit code vào đây.
 
