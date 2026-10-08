@@ -415,6 +415,28 @@ if(c == '\n'){
 
 **Trả lời của người học:** Chưa có.
 
+
+### Lượt củng cố ngày 08/10/2026 — trả lời lại cặp câu hỏi trước
+
+**Trả lời thực tế của người học:**
+
+> 1. **Không**, lần đọc dòng đầu tiên **không phải là EOF**. 2. **Có**, bạn **bắt buộc phải đưa dòng `ABC` vào xử lý hoặc so sánh**. Vì Dù dòng cuối cùng không có ký tự `\n`, chuỗi `ABC` vẫn là dữ liệu hợp pháp nằm trong file.
+
+**Nhận xét:** Nội dung đúng với hai câu hỏi trước về dòng rỗng và dòng cuối không newline. Chưa trả lời cặp câu hỏi hiện tại về strcmp/has_newline và các giá trị trả về cụ thể. Không coi đây là đáp án cho câu hỏi mới.
+
+**Ví dụ nhắc lại:** Sau khi readline tách newline ra khỏi nội dung, file chứa ABC và file chứa ABC\n đều có data là ABC, len bằng 3. has_newline của hai dòng lần lượt là 0 và 1; strcmp chỉ nhìn nội dung chuỗi nên không kiểm tra được sự khác biệt đó.
+
+**Đáp án tham khảo:** Để kiểm tra hai dòng giống hệt, cần đối chiếu len, nội dung theo len và has_newline. Dòng rỗng kết thúc bằng newline có trạng thái trả về 1, len = 0, has_newline = 1; EOF không có dữ liệu trả về 0. Đây là giải thích của trợ lý, không phải câu trả lời của người học.
+
+**Kết luận:** Giữ bước hiện tại, chưa chuyển sang triển khai so sánh. Không sửa code hoặc chạy test mới trong lượt này.
+
+**Câu hỏi hỏi lại:**
+
+1. Hai dòng có data cùng là ABC nhưng has_newline lần lượt bằng 0 và 1: có giống hệt không? strcmp có tự kiểm tra has_newline không?
+2. Với file chỉ chứa một ký tự newline, lần gọi readline đầu trả bao nhiêu, len và has_newline bằng bao nhiêu? Lần gọi tiếp theo trả bao nhiêu?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
