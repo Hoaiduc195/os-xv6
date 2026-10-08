@@ -462,7 +462,25 @@ if(c == '\n'){
 
 **Giới hạn:** Chưa test trực tiếp WSL, lỗi malloc hoặc đầu ra hết dung lượng; printf của xv6 không trả trạng thái ghi nên lỗi ở phần nhãn/thông báo không được kiểm tra đầy đủ. Hàm đọc từng byte dễ hiểu nhưng có nhiều syscall. So sánh theo dòng cùng thứ tự, không tìm tập chỉnh sửa tối thiểu. Chưa commit/push mã nguồn diff hoặc tạo PR diff; chỉ nhật ký được commit trong lượt này.
 
-**Câu hỏi vấn đáp tiếp theo:** Vì sao phải kiểm tra hai độ dài bằng nhau trước khi gọi memcmp với độ dài của dòng thứ nhất?
+**Câu hỏi vấn đáp:** Vì sao phải kiểm tra hai độ dài bằng nhau trước khi gọi memcmp với độ dài của dòng thứ nhất?
+
+**Trả lời thực tế của người học:**
+
+> Vì `memcmp(a, b, n)` chỉ so sánh đúng `n` byte đầu của mỗi vùng nhớ, nó **không biết** độ dài thật của hai chuỗi. Nếu chỉ gọi `memcmp` theo độ dài dòng thứ nhất mà không kiểm tra độ dài.Lưu ý thêm: trong xv6 hàm `memcmp` có sẵn trong `user/ulib.c`, và dùng `memcmp` (theo độ dài) thay vì `strcmp` là hợp lý khi dòng đọc từ `read()` chưa chắc kết thúc bằng `'\0'`.
+
+**Nhận xét:** Đúng ý chính về giới hạn n byte và vị trí memcmp trong user/ulib.c. Nói chính xác, n là số byte tối đa được so sánh; hàm có thể trả ngay khi gặp byte khác nhau. Câu trả lời chưa nêu hệ quả cụ thể khi hai độ dài khác nhau. Nhận xét read không tự thêm ký tự kết thúc chuỗi là đúng nói chung, nhưng readline hiện tại đã chủ động thêm data[len] = '\0'.
+
+**Đáp án tham khảo và ví dụ:**
+
+- Dòng 1 là AB (len 2), dòng 2 là ABC (len 3): memcmp với n = 2 trả 0 vì chỉ xét tiền tố AB, dù hai dòng khác nhau.
+- Nếu n lớn hơn độ dài dữ liệu dòng 2, có thể so sánh cả byte nằm ngoài nội dung hợp lệ của dòng đó; nếu vượt cả vùng cấp phát thì truy cập ngoài vùng nhớ. memcmp có thể dừng sớm khi gặp khác biệt, nhưng người gọi vẫn phải bảo đảm n byte đều nằm trong vùng đọc hợp lệ.
+- Với nội dung ba byte A,0,B và A,0,C, strcmp dừng ở byte 0 nên coi phần chuỗi trước đó bằng nhau; memcmp với n = 3 phát hiện byte cuối khác. Vì vậy memcmp vẫn cần thiết dù readline đã thêm ký tự kết thúc chuỗi.
+
+**Đối chiếu code:** Điều kiện different dùng toán tử || theo thứ tự has1, len, has_newline rồi memcmp. C đánh giá || từ trái sang phải và dừng khi có toán hạng đúng, nên nếu độ dài khác nhau thì không gọi memcmp. Kết quả memcmp bằng 0 chỉ nói các byte được so sánh bằng nhau, chưa tự kiểm tra trạng thái newline.
+
+**Kết luận:** Đã xác nhận người học hiểu memcmp không biết độ dài thực; cần bổ sung ví dụ tiền tố, an toàn vùng nhớ và lý do dùng memcmp trong chính bản readline đã có '\0'. Không sửa code hoặc chạy test mới ở lượt này; đã đối chiếu user/ulib.c và diff.c.
+
+**Câu hỏi tiếp theo:** Trong điều kiện `line1.len != line2.len || memcmp(line1.data, line2.data, line1.len) != 0`, nếu len1 = 2 và len2 = 3 thì memcmp có được gọi không? Vì sao?
 
 **Trả lời của người học:** Chưa có.
 
