@@ -372,6 +372,49 @@ dstfd = open(argv[2], O_CREATE | O_WRONLY | O_TRUNC);
 
 **Trả lời của người học:** Chưa có.
 
+
+### Ngày 08/10/2026 — diff: dòng rỗng và dòng cuối không có newline
+
+**Câu hỏi:** File chứa `\nABC\n`: lần đọc dòng đầu có phải EOF không? File chứa `ABC` không có newline cuối: khi gặp EOF có cần so sánh ABC không?
+
+**Trả lời thực tế của người học (trích nguyên văn các ý chính):**
+
+> Không phải EOF: Lần đọc đầu tiên chưa phải là dấu hiệu kết thúc file (EOF - End of File).
+>
+> Nội dung file bắt đầu bằng ký tự xuống dòng `\n`.
+>
+> Khi hàm đọc dòng (như `fgets`, `readline`, `getline`) chạy lần đầu, nó gặp ngay `\n` và dừng lại, trả về một dòng trống (`""` hoặc chứa ký tự trắng).
+>
+> Có, bắt buộc phải đưa vào so sánh/xử lý: Dòng `ABC` chính là dữ liệu thực tế của file.
+>
+> Nếu bạn ngưng so sánh ngay khi chạm EOF mà không xử lý dữ liệu vừa đọc trước đó, bạn sẽ bị bỏ sót (mất) dòng dữ liệu cuối cùng này.
+
+**Nhận xét:** Cả hai kết luận và lý do chính đều đúng. Cần phân biệt giao diện các hàm: fgets giữ newline nếu đọc được; hàm readline của bài này tự định nghĩa việc bỏ newline khỏi data và lưu riêng has_newline. Không giả định xv6 có sẵn fgets/getline như thư viện trên máy host. Một lần gọi readline có thể gọi read nhiều lần; khi đọc ABC không newline, chính lần gọi readline đầu có thể gặp read trả 0 rồi vẫn trả 1 vì đã thu được dữ liệu.
+
+**Mã đã bổ sung:** struct line có data, len, capacity, has_newline. readline đọc từng byte, trả 1 khi có dòng (kể cả dòng rỗng), 0 khi EOF không còn dữ liệu, -1 khi lỗi đọc/cấp phát. Buffer ban đầu 128 byte, tăng gấp đôi khi cần và luôn chừa chỗ cho ký tự kết thúc chuỗi; kiểm tra tràn kích thước và lỗi malloc. Người gọi khởi tạo struct bằng {0} và free(data) khi xong. len vẫn tính cả byte 0 trong dữ liệu, không dùng strlen để xác định độ dài.
+
+Đoạn quyết định quan trọng:
+
+```c
+if(n == 0)
+  return line->len > 0 ? 1 : 0;
+if(c == '\n'){
+  line->has_newline = 1;
+  return 1;
+}
+```
+
+**Kết luận đã xác nhận:** Người học hiểu dòng rỗng khác EOF và phải giữ dòng cuối chưa có newline. Bước tiếp theo là so sánh độ dài, từng byte và has_newline để phân biệt ABC với ABC\n.
+
+**Kiểm chứng thực tế:** Build user/_diff thành công. Dùng chương trình linetest trong image tạm để gọi trực tiếp readline từ diff.c; 9 kiểm tra QEMU đều đạt: dòng rỗng, dòng có newline, EOF sau newline, dòng cuối không newline, EOF sau dòng cuối, file rỗng, dòng dài 1.200 byte và ký tự kết thúc buffer, byte 0 ở giữa nội dung, lỗi read với descriptor -1. Log: /tmp/xv6-diff-line-qemu.log. Chưa kiểm thử lỗi malloc. Đây là test hàm đọc dòng, chưa phải test chương trình diff hoàn chỉnh; main vẫn báo phần so sánh chưa được triển khai.
+
+**Câu hỏi đang chờ:**
+
+1. File a chứa ABC, file b chứa ABC\n: sau khi bỏ newline khỏi data, hai data đều là ABC. Vì sao chỉ strcmp(data1, data2) chưa đủ để xác định hai file giống hệt?
+2. Nếu lần đọc gặp newline ngay đầu dòng, readline phải trả 1 hay 0, len và has_newline bằng bao nhiêu?
+
+**Trả lời của người học:** Chưa có.
+
 ## 4. Bộ câu hỏi cp — chuẩn bị cho buổi tiếp theo
 
 ### Vì sao không đọc cả file vào một buffer cố định?
