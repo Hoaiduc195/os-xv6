@@ -1,0 +1,317 @@
+% Biên dịch bằng XeLaTeX:
+%   xelatex xv6-lab01-report-template.tex
+% Có thể mở file này bằng Overleaf và chọn compiler là XeLaTeX.
+%
+% Template này chỉ là khung báo cáo. Không chèn toàn bộ mã nguồn vào báo cáo.
+
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{fontspec}
+% Nếu máy không có DejaVu Serif, đổi sang Noto Serif hoặc bỏ dòng này.
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+% DejaVu Sans có đủ ký tự tiếng Việt trên môi trường Windows này.
+\setmonofont{DejaVu Sans}
+
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!60!black,
+  pdftitle={Báo cáo Lab 01 xv6},
+  pdfauthor={Nhóm sinh viên}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.7em}
+
+\newcommand{\placeholder}[1]{%
+  \textcolor{gray}{\textit{[Điền #1]}}%
+}
+
+\newcommand{\taskresulttable}{%
+\begin{center}
+\small
+\begin{tabular}{p{0.20\textwidth}p{0.25\textwidth}p{0.25\textwidth}p{0.14\textwidth}}
+\toprule
+Case & Input/lệnh chạy & Kết quả mong đợi & Đạt? \\
+\midrule
+Bình thường & \placeholder{lệnh kiểm thử} & \placeholder{mô tả output} & \placeholder{Có/Không} \\
+Biên hoặc lỗi & \placeholder{lệnh kiểm thử} & \placeholder{mô tả output} & \placeholder{Có/Không} \\
+\bottomrule
+\end{tabular}
+\end{center}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Lab 01 xv6}
+\rhead{\thepage}
+\setlength{\headheight}{15pt}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+
+{\large \textbf{\placeholder{Tên trường / khoa}}\\[0.3cm]}
+{\large \textbf{\placeholder{Tên môn học}}\\[1.8cm]}
+
+{\Huge \textbf{BÁO CÁO LAB 01}\\[0.5cm]}
+{\Large \textbf{xv6 User Programs: File System}\\[2cm]}
+
+\begin{tabular}{rl}
+Nhóm: & \placeholder{Tên hoặc số nhóm} \\
+MSSV: & \placeholder{MSSV thành viên 1, 2, 3} \\
+Họ và tên: & \placeholder{Họ tên thành viên 1, 2, 3} \\
+Giảng viên: & \placeholder{Tên giảng viên} \\
+\end{tabular}
+
+\vfill
+
+\placeholder{Thành phố, tháng ... năm ...}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section*{Tóm tắt}
+\addcontentsline{toc}{section}{Tóm tắt}
+
+Báo cáo này trình bày cách nhóm triển khai và kiểm thử các chương trình user trong Lab 01 xv6. Nhóm tập trung vào process, pipe, file descriptor, filesystem và đệ quy.
+
+\textbf{Tóm tắt kết quả:} \placeholder{Nêu ngắn gọn các bài đã hoàn thành, các bài còn hạn chế nếu có.}
+
+\section{Thông tin nhóm và phân công}
+
+\begin{center}
+\begin{tabular}{c p{0.22\textwidth} p{0.25\textwidth} p{0.30\textwidth}}
+\toprule
+STT & MSSV & Họ và tên & Phần phụ trách \\
+\midrule
+1 & \placeholder{MSSV} & \placeholder{Họ tên} &
+\texttt{sleep}, \texttt{pingpong}, \texttt{primes} \\
+2 & \placeholder{MSSV} & \placeholder{Họ tên} &
+\texttt{cp}, \texttt{diff} \\
+3 & \placeholder{MSSV} & \placeholder{Họ tên} &
+\texttt{tree}, \texttt{du}, tích hợp và kiểm thử cuối \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Cách phối hợp:} \placeholder{Mô tả ngắn cách chia branch, review code, tích hợp và kiểm thử chéo.}
+
+\section{Môi trường thực hiện}
+
+\begin{itemize}
+  \item Hệ điều hành: \placeholder{Ubuntu 24.04 trên WSL2 / Linux / macOS}
+  \item Compiler: \texttt{\placeholder{tên compiler và phiên bản}}
+  \item QEMU: \texttt{\placeholder{phiên bản QEMU}}
+  \item Commit/branch xv6: \texttt{\placeholder{commit hoặc branch}}
+  \item Cách chạy: \texttt{make clean}, \texttt{make qemu}, \texttt{make grade}
+\end{itemize}
+
+\textbf{Kết quả kiểm tra môi trường:}
+
+\begin{verbatim}
+[Điền output kiểm tra build hoặc grade ở đây.]
+\end{verbatim}
+
+Không cần chèn toàn bộ log build vào báo cáo; chỉ giữ lại output có ích cho việc đánh giá.
+
+\section{Kiến thức và thiết kế chung}
+
+\subsection{API xv6 được sử dụng}
+
+\placeholder{Nêu các system call/hàm chính nhóm dùng, ví dụ: fork, wait, exit, pipe, read, write, close, open, stat, fstat, sleep. Giải thích ngắn vai trò của chúng.}
+
+\subsection{Quy tắc quản lý tài nguyên}
+
+\placeholder{Mô tả cách nhóm đóng file descriptor, chờ process con, xử lý EOF trên pipe và giới hạn kích thước buffer.}
+
+\subsection{Cách kiểm tra lỗi}
+
+\placeholder{Mô tả cách nhóm xử lý lỗi thiếu đối số, không mở được file, read/write thất bại, fork/pipe thất bại và path không hợp lệ.}
+
+\section{Các chương trình đã thực hiện}
+
+\subsection{\texttt{sleep}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả yêu cầu của chương trình.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả cách đọc argv, chuyển đối số sang số và gọi system call sleep. Không chèn toàn bộ mã nguồn.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{pingpong}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả việc trao đổi một byte giữa process cha và process con bằng hai pipe.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả chiều truyền dữ liệu, các descriptor được giữ/đóng ở mỗi process và việc gọi wait.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{primes}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả pipeline sàng số nguyên từ 2 đến 280.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả cách mỗi stage chọn prime, lọc bội số, tạo stage kế tiếp và kết thúc khi read trả về EOF.}
+
+\textbf{Quản lý process và pipe.}
+\placeholder{Giải thích cách tránh giữ descriptor thừa, chờ toàn bộ pipeline và tránh tạo stage khi không còn dữ liệu.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{cp}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả việc sao chép dữ liệu từ file nguồn sang file đích.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả cách mở source/destination, đọc theo buffer, ghi đủ số byte và xử lý lỗi.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{tree}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả cách in cây thư mục và các option đã hỗ trợ như path, -L và -d.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả hàm đệ quy, cách dùng stat/fstat, đọc dirent, ghép path và bỏ qua . và ...}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{du}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả cách tính tổng kích thước theo byte và các option -a, -s.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả hàm đệ quy trả về tổng dung lượng, cách xử lý file/thư mục và quy ước tính size của thư mục.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\subsection{\texttt{diff}}
+
+\textbf{Mục tiêu.}
+\placeholder{Mô tả cách so sánh hai file theo dòng và option -q.}
+
+\textbf{Ý tưởng triển khai.}
+\placeholder{Mô tả helper đọc dòng, xử lý EOF, dòng chỉ xuất hiện ở một file và cách định dạng output.}
+
+\textbf{Kiểm thử.}
+\taskresulttable
+
+\textbf{Nhận xét hoặc khó khăn.}
+\placeholder{Điền nếu có.}
+
+\section{Kết quả kiểm thử tổng hợp}
+
+Bảng dưới đây chỉ ghi các case đại diện. Có thể bổ sung thêm dòng nếu cần.
+
+\begin{center}
+\small
+\begin{longtable}{p{0.14\textwidth}p{0.28\textwidth}p{0.33\textwidth}p{0.12\textwidth}}
+\toprule
+Bài & Case & Kết quả thực tế & Đạt? \\
+\midrule
+\endhead
+\texttt{sleep} & \placeholder{đúng/sai đối số} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{pingpong} & \placeholder{trao đổi cha-con} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{primes} & \placeholder{2 đến 280} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{cp} & \placeholder{file rỗng/file lớn} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{tree} & \placeholder{depth và directory} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{du} & \placeholder{summary và all} & \placeholder{mô tả} & \placeholder{} \\
+\texttt{diff} & \placeholder{giống/khác/EOF} & \placeholder{mô tả} & \placeholder{} \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\textbf{Kết quả make grade hoặc test cuối:}
+
+\begin{verbatim}
+[Điền output quan trọng của make grade nếu có.]
+\end{verbatim}
+
+\section{Khó khăn và cách xử lý}
+
+\begin{enumerate}
+  \item \textbf{Vấn đề:} \placeholder{Ví dụ: pipe bị treo.}
+
+  \textbf{Nguyên nhân:} \placeholder{Descriptor đầu ghi chưa được đóng ở một process.}
+
+  \textbf{Cách xử lý:} \placeholder{Mô tả thay đổi và kết quả sau khi sửa.}
+
+  \item \textbf{Vấn đề:} \placeholder{Vấn đề thứ hai nếu có.}
+
+  \textbf{Cách xử lý:} \placeholder{Mô tả ngắn gọn.}
+\end{enumerate}
+
+Nếu có yêu cầu nào chưa hoàn thành, hãy ghi rõ phạm vi ảnh hưởng và nguyên nhân thay vì bỏ qua.
+
+\section{Kết luận}
+
+\placeholder{Tóm tắt những gì nhóm đã hoàn thành, kiến thức rút ra về process, pipe, file descriptor và filesystem. Nêu ngắn gọn hạn chế còn lại nếu có.}
+
+\section*{Tài liệu tham khảo}
+\addcontentsline{toc}{section}{Tài liệu tham khảo}
+
+\begin{itemize}
+  \item Tài liệu hướng dẫn Lab 01 do giảng viên cung cấp.
+  \item xv6-lab01-guide.md trong repository của nhóm.
+  \item xv6-riscv book, phần process, pipe, file descriptor và filesystem.
+  \item \url{https://pdos.csail.mit.edu/6.1810/2024/labs/util.html}
+\end{itemize}
+
+\appendix
+
+\section{Output hoặc ảnh minh họa tùy chọn}
+
+\placeholder{Chỉ thêm output ngắn hoặc ảnh minh họa cần thiết. Không đưa toàn bộ mã nguồn vào báo cáo.}
+
+\end{document}
