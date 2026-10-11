@@ -14,3 +14,18 @@ Thumbs.db
 desktop.ini
 *~
 *.swp
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex
+*.synctex.gz(busy)
+*.xdv
+*.dvi
+*.bcf
+*.run.xml

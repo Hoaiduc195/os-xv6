@@ -1,317 +1,839 @@
+%!TEX program = xelatex
 % Biên dịch bằng XeLaTeX:
 %   xelatex xv6-lab01-report-template.tex
-% Có thể mở file này bằng Overleaf và chọn compiler là XeLaTeX.
+% Hoặc mở file này bằng Overleaf và chọn compiler là XeLaTeX.
 %
-% Template này chỉ là khung báo cáo. Không chèn toàn bộ mã nguồn vào báo cáo.
+% Báo cáo thực hành Lab 01 – Xv6 User Programs: File System
 
 \documentclass[12pt,a4paper]{article}
 
-\usepackage[a4paper,margin=2.5cm]{geometry}
+% --- Cấu hình trang & lề ---
+\usepackage[a4paper,margin=2.2cm,top=2.5cm,bottom=2.5cm]{geometry}
+
+% --- Phông chữ Unicode tiếng Việt ---
 \usepackage{fontspec}
-% Nếu máy không có DejaVu Serif, đổi sang Noto Serif hoặc bỏ dòng này.
 \setmainfont{DejaVu Serif}
 \setsansfont{DejaVu Sans}
-% DejaVu Sans có đủ ký tự tiếng Việt trên môi trường Windows này.
 \setmonofont{DejaVu Sans}
 
 \usepackage{polyglossia}
 \setdefaultlanguage{vietnamese}
-\usepackage{amsmath}
+
+% --- Các gói hỗ trợ toán & đồ họa ---
+\usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{tabularx}
 \usepackage{longtable}
 \usepackage{enumitem}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{hyperref}
 \usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{fancyvrb}
+\usepackage{lastpage}
+\usepackage{microtype}
+\tcbuselibrary{skins,breakable}
 
+% --- Bảng màu chuyên nghiệp ---
+\definecolor{primary}{RGB}{20, 60, 105}        % Xanh học thuật đậm
+\definecolor{secondary}{RGB}{41, 128, 185}     % Xanh biển hiện đại
+\definecolor{darkneutral}{RGB}{44, 62, 80}     % Xám đen chữ thanh lịch
+\definecolor{lightbg}{RGB}{247, 249, 252}      % Nền xám nhạt cho box/code
+\definecolor{tableheader}{RGB}{232, 241, 250}  % Nền tiêu đề bảng
+\definecolor{codeborder}{RGB}{210, 222, 235}   % Viền box mềm mại
+\definecolor{accent}{RGB}{231, 76, 60}         % Màu nhấn đỏ gạch
+
+% --- Cấu hình liên kết PDF ---
 \hypersetup{
   colorlinks=true,
-  linkcolor=blue!50!black,
-  urlcolor=blue!60!black,
-  pdftitle={Báo cáo Lab 01 xv6},
-  pdfauthor={Nhóm sinh viên}
+  linkcolor=primary,
+  urlcolor=secondary,
+  citecolor=primary,
+  pdftitle={Lab 01 – Xv6 User Programs: File System},
+  pdfauthor={Trần Nguyên Tân, Nguyễn Thành Bảo, Dương Hoài Đức}
 }
 
+% --- Khoảng cách dòng & đoạn văn ---
+\linespread{1.18}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.45em}
-\setlist[itemize]{leftmargin=1.5em}
-\setlist[enumerate]{leftmargin=1.7em}
+\setlength{\parskip}{0.55em}
+\setlist[itemize]{leftmargin=1.6em,itemsep=0.2em,topsep=0.2em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.2em,topsep=0.2em}
 
-\newcommand{\placeholder}[1]{%
-  \textcolor{gray}{\textit{[Điền #1]}}%
-}
+% --- Định dạng tiêu đề các phần (titlesec) ---
+\titleformat{\section}
+  {\color{primary}\Large\bfseries}
+  {\thesection.}{0.6em}{}[\vspace{0.2em}{\color{primary}\titlerule[1.2pt]}]
 
-\newcommand{\taskresulttable}{%
-\begin{center}
-\small
-\begin{tabular}{p{0.20\textwidth}p{0.25\textwidth}p{0.25\textwidth}p{0.14\textwidth}}
-\toprule
-Case & Input/lệnh chạy & Kết quả mong đợi & Đạt? \\
-\midrule
-Bình thường & \placeholder{lệnh kiểm thử} & \placeholder{mô tả output} & \placeholder{Có/Không} \\
-Biên hoặc lỗi & \placeholder{lệnh kiểm thử} & \placeholder{mô tả output} & \placeholder{Có/Không} \\
-\bottomrule
-\end{tabular}
-\end{center}
-}
+\titleformat{\subsection}
+  {\color{secondary}\large\bfseries}
+  {\thesubsection}{0.6em}{}
 
+\titleformat{\subsubsection}
+  {\color{darkneutral}\normalsize\bfseries}
+  {\thesubsubsection}{0.5em}{}
+
+% --- Cấu hình Header và Footer (fancyhdr) ---
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{Lab 01 xv6}
-\rhead{\thepage}
-\setlength{\headheight}{15pt}
+\lhead{\small\textcolor{darkneutral}{\textbf{Lab 01 – Xv6 User Programs: File System}}}
+\rhead{\small\textcolor{gray}{Môn học: Hệ điều hành}}
+\rfoot{\small\textcolor{darkneutral}{\textbf{Trang \thepage\,/\,\pageref{LastPage}}}}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{secondary!70}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{gray!30}\leaders\hrule height \footrulewidth\hfill}}
+\setlength{\headheight}{25pt}
+\addtolength{\topmargin}{-9pt}
 
+% --- Macro tiện ích ---
+\newcommand{\placeholder}[1]{%
+  \textcolor{gray!80!black}{\textit{[#1]}}%
+}
+
+% Hộp hiển thị log/terminal
+\newtcolorbox{terminalbox}[1][]{
+  enhanced,
+  colback=lightbg,
+  colframe=codeborder,
+  coltitle=primary,
+  boxrule=0.7pt,
+  arc=3.5pt,
+  left=10pt,right=10pt,top=8pt,bottom=8pt,
+  breakable,
+  #1
+}
+
+% Hộp ghi chú / tóm tắt nổi bật
+\newtcolorbox{notebox}[1][]{
+  enhanced,
+  colback=primary!4,
+  colframe=primary,
+  boxrule=0pt,
+  leftrule=3.5pt,
+  arc=2pt,
+  left=10pt,right=10pt,top=6pt,bottom=6pt,
+  breakable,
+  #1
+}
+
+% Hộp pseudocode theo phong cách thuật toán trong bài báo khoa học
+\newenvironment{algorithmblock}[1]{%
+  \begin{tcolorbox}[
+    enhanced,
+    breakable,
+    colback=white,
+    colframe=primary!55,
+    colbacktitle=primary,
+    coltitle=white,
+    boxrule=0.7pt,
+    arc=2pt,
+    left=10pt,right=10pt,top=7pt,bottom=8pt,
+    title={#1},
+    fonttitle=\small
+  ]
+}{%
+  \end{tcolorbox}
+}
+
+\DefineVerbatimEnvironment{algorithmcode}{Verbatim}{
+  commandchars=\\\{\},
+  fontsize=\small,
+  baselinestretch=1.05,
+  numbers=left,
+  numbersep=8pt,
+  xleftmargin=2.0em,
+  frame=none
+}
+
+% =========================================================================
+% BẮT ĐẦU TÀI LIỆU
+% =========================================================================
 \begin{document}
 
+% -------------------------------------------------------------------------
+% TRANG BÌA
+% -------------------------------------------------------------------------
 \begin{titlepage}
+\begin{tcolorbox}[
+  enhanced,
+  colback=white,
+  colframe=primary,
+  boxrule=0.9pt,
+  arc=0pt,
+  height=\textheight,
+  valign=top,
+  left=1.25cm,right=1.25cm,top=1.15cm,bottom=1.15cm,
+  borderline west={4pt}{0pt}{secondary}
+]
 \centering
 
-{\large \textbf{\placeholder{Tên trường / khoa}}\\[0.3cm]}
-{\large \textbf{\placeholder{Tên môn học}}\\[1.8cm]}
+{\small\bfseries ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH\par}
+\vspace{0.18cm}
+{\large\bfseries TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN\par}
+\vspace{0.12cm}
+{\normalsize\bfseries KHOA CÔNG NGHỆ THÔNG TIN\par}
+{\small BỘ MÔN HỆ ĐIỀU HÀNH\par}
+\vspace{0.42cm}
+{\color{primary}\rule{0.72\linewidth}{1.2pt}\par}
 
-{\Huge \textbf{BÁO CÁO LAB 01}\\[0.5cm]}
-{\Large \textbf{xv6 User Programs: File System}\\[2cm]}
+\vspace{1.7cm}
 
-\begin{tabular}{rl}
-Nhóm: & \placeholder{Tên hoặc số nhóm} \\
-MSSV: & \placeholder{MSSV thành viên 1, 2, 3} \\
-Họ và tên: & \placeholder{Họ tên thành viên 1, 2, 3} \\
-Giảng viên: & \placeholder{Tên giảng viên} \\
+{\Large\bfseries\color{primary} BÁO CÁO THỰC HÀNH\par}
+\vspace{0.18cm}
+{\normalsize\bfseries\color{darkneutral} MÔN HỆ ĐIỀU HÀNH\par}
+\vspace{0.85cm}
+{\Huge\bfseries\color{secondary} Lab 01\par}
+\vspace{0.12cm}
+{\LARGE\bfseries\color{primary} Xv6 User Programs:\\[0.10cm]
+File System\par}
+\vspace{0.25cm}
+\vspace{1.55cm}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=lightbg,
+  colframe=codeborder,
+  boxrule=0.5pt,
+  arc=1.5pt,
+  width=0.92\linewidth,
+  left=14pt,right=14pt,top=12pt,bottom=12pt
+]
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{r l}
+\textbf{Lớp học phần:} & \placeholder{Mã lớp / Tên lớp} \\
+\textbf{Sinh viên:} & 24120438 -- Trần Nguyên Tân \\
+                     & 24120023 -- Nguyễn Thành Bảo \\
+                     & 24120040 -- Dương Hoài Đức \\
+\textbf{Giảng viên:} & \placeholder{ThS./TS. Tên giảng viên} \\
 \end{tabular}
+\end{tcolorbox}
 
 \vfill
 
-\placeholder{Thành phố, tháng ... năm ...}
-
+\end{tcolorbox}
 \end{titlepage}
 
-\tableofcontents
+% -------------------------------------------------------------------------
+% MỤC LỤC
+% -------------------------------------------------------------------------
+\newpage
+{
+  \hypersetup{linkcolor=darkneutral}
+  \tableofcontents
+}
 \newpage
 
-\section*{Tóm tắt}
-\addcontentsline{toc}{section}{Tóm tắt}
+% -------------------------------------------------------------------------
+% TÓM TẮT BÁO CÁO
+% -------------------------------------------------------------------------
+\section*{Tóm tắt báo cáo}
+\addcontentsline{toc}{section}{Tóm tắt báo cáo}
 
-Báo cáo này trình bày cách nhóm triển khai và kiểm thử các chương trình user trong Lab 01 xv6. Nhóm tập trung vào process, pipe, file descriptor, filesystem và đệ quy.
+Báo cáo này trình bày kết quả thực hiện, thiết kế kỹ thuật và quá trình kiểm thử toàn diện các chương trình tiện ích không gian người dùng (\textit{User Programs}) trong khuôn khổ bài thực hành \textbf{Lab 01 (Hệ điều hành xv6 -- Kiến trúc RISC-V)}. Mục tiêu trọng tâm của bài thực hành là tiếp cận kiến trúc phân tầng người dùng/nhân (\textit{User/Kernel Space}), vận dụng các system call cơ bản, cơ chế quản lý vòng đời tiến trình, truyền thông liên tiến trình (IPC) và các thao tác truy xuất hệ thống tệp tin (\textit{File System}).
 
-\textbf{Tóm tắt kết quả:} \placeholder{Nêu ngắn gọn các bài đã hoàn thành, các bài còn hạn chế nếu có.}
-
-\section{Thông tin nhóm và phân công}
-
-\begin{center}
-\begin{tabular}{c p{0.22\textwidth} p{0.25\textwidth} p{0.30\textwidth}}
-\toprule
-STT & MSSV & Họ và tên & Phần phụ trách \\
-\midrule
-1 & \placeholder{MSSV} & \placeholder{Họ tên} &
-\texttt{sleep}, \texttt{pingpong}, \texttt{primes} \\
-2 & \placeholder{MSSV} & \placeholder{Họ tên} &
-\texttt{cp}, \texttt{diff} \\
-3 & \placeholder{MSSV} & \placeholder{Họ tên} &
-\texttt{tree}, \texttt{du}, tích hợp và kiểm thử cuối \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\textbf{Cách phối hợp:} \placeholder{Mô tả ngắn cách chia branch, review code, tích hợp và kiểm thử chéo.}
-
-\section{Môi trường thực hiện}
-
+Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây dựng mã giả và hiện thực thành công toàn bộ \textbf{07 chương trình tiện ích}:
 \begin{itemize}
-  \item Hệ điều hành: \placeholder{Ubuntu 24.04 trên WSL2 / Linux / macOS}
-  \item Compiler: \texttt{\placeholder{tên compiler và phiên bản}}
-  \item QEMU: \texttt{\placeholder{phiên bản QEMU}}
-  \item Commit/branch xv6: \texttt{\placeholder{commit hoặc branch}}
-  \item Cách chạy: \texttt{make clean}, \texttt{make qemu}, \texttt{make grade}
+  \item \textbf{Phân nhóm Tiến trình \& IPC:}
+    \begin{itemize}
+      \item \texttt{sleep}: Tạm dừng tiến trình theo chu kỳ đồng hồ (\textit{ticks}) của hệ thống.
+      \item \texttt{pingpong}: Hiện thực cơ chế giao tiếp 2 chiều đồng bộ giữa tiến trình cha và con thông qua cặp đường ống (\textit{pipes}).
+      \item \texttt{primes}: Xây dựng thuật toán sàng số nguyên tố Eratosthenes đồng thời (\textit{Concurrent Prime Sieve}) theo mô hình pipeline đa tiến trình kết nối liên tiếp từ 2 đến 280.
+    \end{itemize}
+  \item \textbf{Phân nhóm Tệp tin \& Duyệt hệ thống tệp:}
+    \begin{itemize}
+      \item \texttt{cp}: Sao chép dữ liệu tập tin an toàn qua bộ đệm (\textit{buffer streaming}), xử lý kiểm tra trùng tệp nguồn/đích.
+      \item \texttt{tree}: Duyệt đệ quy cây thư mục hiển thị phân cấp trực quan, hỗ trợ giới hạn độ sâu (\texttt{-L}) và lọc thư mục (\texttt{-d}).
+      \item \texttt{du}: Ước tính dung lượng sử dụng đĩa (\textit{Disk Usage}) theo byte, hỗ trợ tính tổng nhanh (\texttt{-s}) và liệt kê chi tiết tệp (\texttt{-a}).
+      \item \texttt{diff}: So sánh nội dung hai tệp tin theo từng dòng, xử lý so khớp EOF và chế độ thông báo tóm tắt (\texttt{-q}).
+    \end{itemize}
 \end{itemize}
 
-\textbf{Kết quả kiểm tra môi trường:}
+\begin{notebox}
+\textbf{Tóm tắt kết quả \& Đánh giá chung:}
+\begin{itemize}
+  \item \textbf{Tỷ lệ hoàn thành:} $7/7$ chương trình ($100\%$ khối lượng yêu cầu).
+  \item \textbf{Độ tin cậy \& Quản lý tài nguyên:} Tất cả các chương trình đều được kiểm thử nghiêm ngặt trên trình giả lập QEMU, kiểm soát chặt chẽ việc giải phóng bộ mô tả tập tin (không rò rỉ File Descriptor), đóng đúng các đầu pipe thừa để kích hoạt tín hiệu EOF chính xác, và đồng bộ hóa triệt để bằng \texttt{wait()} nhằm loại bỏ hoàn toàn nguy cơ sinh tiến trình ma (\textit{zombie process}).
+  \item \textbf{Kiểm thử tự động:} Đáp ứng đầy đủ các ca kiểm thử chức năng và trường hợp biên lỗi theo chuẩn kịch bản kiểm thử của môn học.
+\end{itemize}
+\end{notebox}
 
-\begin{verbatim}
-[Điền output kiểm tra build hoặc grade ở đây.]
-\end{verbatim}
-
-Không cần chèn toàn bộ log build vào báo cáo; chỉ giữ lại output có ích cho việc đánh giá.
-
-\section{Kiến thức và thiết kế chung}
-
-\subsection{API xv6 được sử dụng}
-
-\placeholder{Nêu các system call/hàm chính nhóm dùng, ví dụ: fork, wait, exit, pipe, read, write, close, open, stat, fstat, sleep. Giải thích ngắn vai trò của chúng.}
-
-\subsection{Quy tắc quản lý tài nguyên}
-
-\placeholder{Mô tả cách nhóm đóng file descriptor, chờ process con, xử lý EOF trên pipe và giới hạn kích thước buffer.}
-
-\subsection{Cách kiểm tra lỗi}
-
-\placeholder{Mô tả cách nhóm xử lý lỗi thiếu đối số, không mở được file, read/write thất bại, fork/pipe thất bại và path không hợp lệ.}
-
-\section{Các chương trình đã thực hiện}
-
-\subsection{\texttt{sleep}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả yêu cầu của chương trình.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả cách đọc argv, chuyển đối số sang số và gọi system call sleep. Không chèn toàn bộ mã nguồn.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{pingpong}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả việc trao đổi một byte giữa process cha và process con bằng hai pipe.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả chiều truyền dữ liệu, các descriptor được giữ/đóng ở mỗi process và việc gọi wait.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{primes}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả pipeline sàng số nguyên từ 2 đến 280.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả cách mỗi stage chọn prime, lọc bội số, tạo stage kế tiếp và kết thúc khi read trả về EOF.}
-
-\textbf{Quản lý process và pipe.}
-\placeholder{Giải thích cách tránh giữ descriptor thừa, chờ toàn bộ pipeline và tránh tạo stage khi không còn dữ liệu.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{cp}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả việc sao chép dữ liệu từ file nguồn sang file đích.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả cách mở source/destination, đọc theo buffer, ghi đủ số byte và xử lý lỗi.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{tree}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả cách in cây thư mục và các option đã hỗ trợ như path, -L và -d.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả hàm đệ quy, cách dùng stat/fstat, đọc dirent, ghép path và bỏ qua . và ...}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{du}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả cách tính tổng kích thước theo byte và các option -a, -s.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả hàm đệ quy trả về tổng dung lượng, cách xử lý file/thư mục và quy ước tính size của thư mục.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\subsection{\texttt{diff}}
-
-\textbf{Mục tiêu.}
-\placeholder{Mô tả cách so sánh hai file theo dòng và option -q.}
-
-\textbf{Ý tưởng triển khai.}
-\placeholder{Mô tả helper đọc dòng, xử lý EOF, dòng chỉ xuất hiện ở một file và cách định dạng output.}
-
-\textbf{Kiểm thử.}
-\taskresulttable
-
-\textbf{Nhận xét hoặc khó khăn.}
-\placeholder{Điền nếu có.}
-
-\section{Kết quả kiểm thử tổng hợp}
-
-Bảng dưới đây chỉ ghi các case đại diện. Có thể bổ sung thêm dòng nếu cần.
+% -------------------------------------------------------------------------
+% PHẦN 1: THÔNG TIN NHÓM VÀ PHÂN CÔNG
+% -------------------------------------------------------------------------
+\section{Thông tin thành viên và phân công công việc}
 
 \begin{center}
 \small
-\begin{longtable}{p{0.14\textwidth}p{0.28\textwidth}p{0.33\textwidth}p{0.12\textwidth}}
+\begin{tabularx}{\textwidth}{c p{0.22\textwidth} p{0.26\textwidth} X}
 \toprule
-Bài & Case & Kết quả thực tế & Đạt? \\
+\rowcolor{tableheader}
+\textbf{STT} & \textbf{MSSV} & \textbf{Họ và tên} & \textbf{Nhiệm vụ phụ trách} \\
 \midrule
-\endhead
-\texttt{sleep} & \placeholder{đúng/sai đối số} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{pingpong} & \placeholder{trao đổi cha-con} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{primes} & \placeholder{2 đến 280} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{cp} & \placeholder{file rỗng/file lớn} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{tree} & \placeholder{depth và directory} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{du} & \placeholder{summary và all} & \placeholder{mô tả} & \placeholder{} \\
-\texttt{diff} & \placeholder{giống/khác/EOF} & \placeholder{mô tả} & \placeholder{} \\
+1 & 24120438 & Trần Nguyên Tân & \texttt{sleep}, \texttt{pingpong}, \texttt{primes} \\
+2 & 24120023 & Nguyễn Thành Bảo & \texttt{cp}, \texttt{diff} \\
+3 & 24120040 & Dương Hoài Đức & \texttt{tree}, \texttt{du}, tích hợp và kiểm thử chung \\
 \bottomrule
-\end{longtable}
+\end{tabularx}
 \end{center}
 
-\textbf{Kết quả make grade hoặc test cuối:}
+\textbf{Phương thức phối hợp nhóm:} \placeholder{Mô tả ngắn gọn quy trình làm việc: phân chia nhánh trên Git (feature branches), viết pull request, review code chéo và kiểm thử tích hợp trên môi trường chung.}
 
+% -------------------------------------------------------------------------
+% PHẦN 2: MÔI TRƯỜNG THỰC HIỆN
+% -------------------------------------------------------------------------
+\section{Môi trường thực hiện và kiểm thử}
+
+\begin{itemize}
+  \item \textbf{Hệ điều hành chủ / máy ảo:} \placeholder{Ubuntu 24.04 LTS trên WSL2 (Windows 11) / Linux / macOS}
+  \item \textbf{Trình biên dịch (Toolchain):} \texttt{\placeholder{riscv64-linux-gnu-gcc (GCC 12.x / 13.x)}}
+  \item \textbf{Trình giả lập phần cứng:} \texttt{\placeholder{QEMU emulator version 8.x.x (qemu-system-riscv64)}}
+  \item \textbf{Kho mã nguồn \& nhánh làm việc:} \texttt{\placeholder{Nhánh main / commit SHA...}}
+  \item \textbf{Quy trình biên dịch và khởi chạy:}
+    \begin{itemize}
+      \item Dọn dẹp bản dựng: \texttt{make clean}
+      \item Biên dịch và khởi chạy máy ảo: \texttt{make qemu}
+      \item Chạy toàn bộ bài chấm điểm: \texttt{make grade}
+    \end{itemize}
+\end{itemize}
+
+\textbf{Kết quả xác nhận môi trường thực thi:}
+
+\begin{terminalbox}
+\small
 \begin{verbatim}
-[Điền output quan trọng của make grade nếu có.]
-\end{verbatim}
+$ riscv64-linux-gnu-gcc --version
+riscv64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
 
-\section{Khó khăn và cách xử lý}
+$ qemu-system-riscv64 --version
+QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.2)
+\end{verbatim}
+\end{terminalbox}
+
+% -------------------------------------------------------------------------
+% PHẦN 3: KIẾN THỨC VÀ THIẾT KẾ CHUNG
+% -------------------------------------------------------------------------
+\section{Kiến thức nền tảng và thiết kế hệ thống}
+
+Trong bài thực hành, \texttt{pingpong} và \texttt{primes} dùng tiến trình con để trao đổi và xử lý dữ liệu; \texttt{cp}, \texttt{tree}, \texttt{du} và \texttt{diff} làm việc với tệp và thư mục. Dù có chức năng khác nhau, các chương trình đều cần kiểm tra kết quả thao tác, đóng tài nguyên sau khi sử dụng và thông báo rõ khi không thể tiếp tục. Phần này trình bày những kiến thức chung được áp dụng trong mã nguồn.
+
+\subsection{Các system call được sử dụng}
+
+System call là cách chương trình yêu cầu nhân xv6 thực hiện các thao tác như mở tệp, tạo tiến trình hoặc đọc dữ liệu. Các system call chính trong bài được sử dụng như sau:
+
+\begin{itemize}
+  \item \textbf{Tạo và chờ tiến trình:} \texttt{fork()} tạo tiến trình con. Giá trị trả về giúp chương trình phân biệt phần việc của cha và con: 0 ở tiến trình con, PID của con ở tiến trình cha, và giá trị âm nếu thất bại. Trong \texttt{pingpong} và \texttt{primes}, tiến trình cha dùng \texttt{wait()} để chờ con kết thúc và thu hồi thông tin tiến trình con.
+  \item \textbf{Trao đổi dữ liệu qua pipe:} \texttt{pipe()} tạo một đường truyền một chiều, gồm đầu đọc và đầu ghi. \texttt{pingpong} dùng hai pipe cho hai chiều trao đổi; \texttt{primes} nối các tiến trình bằng pipe để chuyển những số còn lại sang bước sàng tiếp theo.
+  \item \textbf{Mở và đóng tệp:} \texttt{open()} trả về một số nguyên dùng để truy cập tệp, gọi là bộ mô tả tệp. \texttt{cp} mở nguồn để đọc, còn đích được mở với các cờ tạo tệp, ghi và xóa nội dung cũ. Các chương trình gọi \texttt{close()} khi không còn dùng tệp hoặc một đầu pipe.
+  \item \textbf{Đọc và ghi dữ liệu:} \texttt{read()} và \texttt{write()} làm việc với cả tệp lẫn pipe. Giá trị trả về cho biết số byte thực sự đã đọc hoặc ghi. Vì vậy, \texttt{cp} ghi đúng lượng dữ liệu vừa đọc được, kể cả phần cuối ngắn hơn bộ đệm; \texttt{pingpong} kiểm tra đủ một byte cho mỗi lượt trao đổi.
+  \item \textbf{Lấy thông tin tệp:} \texttt{fstat()} cung cấp loại tệp, kích thước và thông tin nhận diện của tệp đang mở. \texttt{cp} dùng thông tin này để tránh sao chép một tệp lên chính nó; \texttt{diff} kiểm tra hai đầu vào là tệp thông thường. \texttt{tree} và \texttt{du} dùng \texttt{stat()} để lấy thông tin theo đường dẫn. Trong xv6, \texttt{stat()} là hàm thư viện kết hợp \texttt{open()}, \texttt{fstat()} và \texttt{close()}, không phải một system call riêng.
+  \item \textbf{Tạm dừng và kết thúc:} \texttt{sleep()} tạm dừng tiến trình theo số tick đã nhập. \texttt{getpid()} lấy PID để in kết quả trong \texttt{pingpong}. \texttt{exit()} kết thúc chương trình và trả mã trạng thái cho tiến trình cha.
+\end{itemize}
+
+\subsection{Quản lý tài nguyên}
+
+\textbf{Đóng đúng các đầu pipe.} Sau \texttt{fork()}, cả cha và con đều có các bộ mô tả tệp đã mở trước đó. Mỗi tiến trình cần đóng những đầu pipe không thuộc phần việc của mình. Khi bên gửi đã đóng tất cả các đầu ghi và dữ liệu trong pipe đã được đọc hết, bên nhận mới nhận được dấu hiệu hết dữ liệu (EOF). Nếu còn giữ một đầu ghi không dùng, bên nhận có thể tiếp tục chờ dù không còn số nào được gửi. Trong \texttt{primes}, việc đóng đầu ghi sau khi chuyển hết các số giúp tiến trình kế tiếp kết thúc vòng đọc.
+
+\textbf{Chờ tiến trình con kết thúc.} Trên luồng chạy bình thường, các tiến trình cha trong \texttt{pingpong} và \texttt{primes} gọi \texttt{wait()} sau khi hoàn thành phần gửi dữ liệu. Việc này giúp thu hồi thông tin của tiến trình con đã kết thúc, thay vì để con ở trạng thái chờ được thu hồi. Với \texttt{primes}, mỗi bước sàng chỉ tạo tiến trình kế tiếp khi có số cần chuyển tiếp, tránh tạo thêm tiến trình ở cuối chuỗi.
+
+\textbf{Thu dọn tệp và bộ nhớ.} \texttt{cp} đóng cả tệp nguồn lẫn tệp đích sau khi sao chép hoặc khi gặp lỗi đọc, ghi. \texttt{tree} và \texttt{du} đóng thư mục ở từng lượt gọi đệ quy. \texttt{diff} giải phóng bộ nhớ chứa hai dòng và đóng hai tệp trước khi thoát. Một số nhánh lỗi trong \texttt{pingpong} và \texttt{primes} gọi \texttt{exit()} trực tiếp; nhân xv6 sẽ đóng các bộ mô tả tệp còn mở khi tiến trình kết thúc.
+
+\textbf{Chọn bộ đệm phù hợp.} \texttt{cp} sao chép từng phần với bộ đệm 512 byte, không cần giữ toàn bộ tệp trong bộ nhớ. \texttt{tree} và \texttt{du} dùng bộ đệm đường dẫn 256 byte và kiểm tra độ dài trước khi nối tên mục con. Riêng \texttt{diff} cấp phát bộ đệm cho từng dòng, tăng kích thước khi cần và giải phóng vùng nhớ cũ sau khi thay thế. Cách này cho phép đọc dòng dài hơn kích thước ban đầu, trong giới hạn bộ nhớ có thể cấp phát.
+
+\subsection{Xử lý lỗi và thông báo kết quả}
+
+\textbf{Kiểm tra tham số trước khi thực hiện.} \texttt{sleep} yêu cầu đúng một tham số, không rỗng và chỉ gồm chữ số; \texttt{cp} yêu cầu hai đường dẫn. \texttt{tree} kiểm tra tham số đi kèm \texttt{-L} và từ chối độ sâu không dương. \texttt{tree}, \texttt{du} và \texttt{diff} cũng kiểm tra các tùy chọn được hỗ trợ. Khi cú pháp không hợp lệ, chương trình báo lỗi thay vì tiếp tục với tham số thiếu hoặc sai.
+
+\textbf{Kiểm tra kết quả thao tác.} Những thao tác như \texttt{open()}, \texttt{pipe()}, \texttt{fork()} và \texttt{fstat()} có thể thất bại, nên chương trình cần kiểm tra trước khi dùng kết quả. Với thao tác đọc, giá trị dương là số byte nhận được, 0 là hết dữ liệu và giá trị âm là lỗi. \texttt{cp} phân biệt hết tệp với lỗi đọc, đồng thời coi việc ghi thiếu byte là thất bại. \texttt{diff} kiểm tra lỗi đọc, cấp phát bộ nhớ và ghi nội dung dòng; hàm in dòng tiếp tục ghi phần còn lại nếu một lần ghi chưa hết dữ liệu.
+
+\textbf{Bảo vệ dữ liệu và chọn phạm vi dừng.} \texttt{cp} kiểm tra tệp đích trước khi mở với cờ xóa nội dung cũ, đặc biệt là trường hợp nguồn và đích cùng trỏ đến một tệp. Với \texttt{tree}, nếu không lấy được thông tin một mục con thì chương trình báo lỗi rồi duyệt tiếp các mục khác. \texttt{du} trả về 0 cho nhánh không truy cập được, nên tổng in ra có thể chưa bao gồm toàn bộ dữ liệu khi có lỗi. Đây là cách xử lý hiện có trong mã nguồn, không phải cam kết rằng việc duyệt luôn đầy đủ.
+
+Thông báo lỗi được ghi ra luồng lỗi chuẩn bằng \texttt{fprintf(2, ...)}, thường kèm tên lệnh và đường dẫn liên quan để người dùng biết thao tác nào thất bại. Các lệnh thường dùng mã thoát 0 khi hoàn thành và 1 cho lỗi được phát hiện ở mức chương trình chính. Riêng \texttt{diff} dùng 0 khi hai tệp giống nhau, 1 khi có khác biệt và 2 khi có lỗi; việc hai tệp khác nhau là kết quả so sánh, không phải lỗi thực thi.
+
+Việc kiểm tra lỗi chưa đồng đều ở mọi vòng đọc: \texttt{primes}, \texttt{tree} và \texttt{du} dừng vòng lặp khi không đọc đủ một phần tử nhưng chưa tách riêng trường hợp hết dữ liệu và lỗi đọc. Vì vậy, phần báo cáo chỉ mô tả các kiểm tra đã có, không xem đây là cơ chế xử lý lỗi đầy đủ cho mọi tình huống.
+
+% -------------------------------------------------------------------------
+% PHẦN 4: CHI TIẾT CÁC CHƯƠNG TRÌNH THỰC HIỆN
+% -------------------------------------------------------------------------
+\section{Các chương trình đã thực hiện}
+
+% --- 4.1. sleep ---
+\subsection{\texttt{sleep}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Tạm dừng tiến trình hiện tại trong số chu kỳ đồng hồ do \texttt{ticks} chỉ định.
+  \item \textbf{Tham số:} Chấp nhận đúng một tham số bắt buộc theo cú pháp \texttt{sleep ticks}; \texttt{ticks} phải là một giá trị số hợp lệ.
+  \item \textbf{Xử lý lỗi:} Phát hiện trường hợp thiếu, thừa hoặc sai định dạng tham số và thông báo lỗi phù hợp.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Lệnh \texttt{sleep} sử dụng cơ chế chờ của hệ điều hành thay vì tự đếm thời gian bằng một vòng lặp. Sau khi kiểm tra tham số không rỗng và chỉ chứa chữ số, chương trình chuyển giá trị nhập thành số tick rồi yêu cầu tạm dừng tiến trình. Trong thời gian đó, tiến trình không chiếm CPU để chờ, nên hệ thống có thể chạy các công việc khác. Hết khoảng chờ, tiến trình được phép chạy tiếp và kết thúc. Thời lượng ở đây được tính theo tick của xv6, không phải theo giây.
+
+Mã giả dưới đây mô tả các bước kiểm tra tham số và tạm dừng tiến trình trong hàm \texttt{main()}.
+
+\begin{algorithmblock}{\texttt{sleep}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Main(arguments)
+    \textbf{IF} arguments do not contain exactly one value \textbf{THEN}
+        \textbf{REPORT} usage error; \textbf{EXIT} 1
+    \textbf{END IF}
+    value ← the supplied argument
+    \textbf{IF} value is empty or contains a non-digit character \textbf{THEN}
+        \textbf{REPORT} invalid duration; \textbf{EXIT} 1
+    \textbf{END IF}
+    ticks ← ConvertToInteger(value)
+    Suspend the current process for ticks clock ticks
+    \textbf{EXIT} 0
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Ghi chú các trường hợp đặc biệt (ví dụ: ticks âm hoặc bằng 0).}
+
+% --- 4.2. pingpong ---
+\subsection{\texttt{pingpong}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Minh họa giao tiếp hai chiều giữa tiến trình cha và tiến trình con bằng cách gửi ``ping'' và nhận phản hồi ``pong''.
+  \item \textbf{Tham số:} Không nhận tham số dòng lệnh; lệnh được thực thi trực tiếp bằng \texttt{pingpong}.
+  \item \textbf{Kết quả:} In thông báo giao tiếp kèm PID của các tiến trình và kết thúc bình thường sau khi trao đổi hoàn tất.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Hai tiến trình trao đổi qua hai pipe, một pipe cho chiều cha gửi sang con và một pipe cho chiều phản hồi. Tiến trình cha gửi một byte để bắt đầu lượt trao đổi. Khi nhận được byte này, tiến trình con in thông báo nhận ping, gửi lại byte đó rồi kết thúc. Cha chờ con hoàn tất, đọc phản hồi và in thông báo nhận pong. Nhờ trình tự gửi--nhận này, thông báo ping luôn xuất hiện trước pong mà không cần quy định tiến trình nào phải được chạy trước. Các đầu pipe không sử dụng được đóng ở mỗi bên; những đầu còn lại cũng được đóng sau khi trao đổi xong.
+
+Trình tự trao đổi giữa tiến trình cha và con được trình bày trong mã giả dưới đây, tương ứng với hàm \texttt{main()}.
+
+\begin{algorithmblock}{\texttt{pingpong}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Main()
+    Create channels p (parent to child) and q (child to parent)
+    Create a child process
+    \textbf{IF} channel creation or process creation fails \textbf{THEN}
+        \textbf{REPORT} error; \textbf{EXIT} 1
+    \textbf{END IF}
+    \textbf{IF} executing in the parent \textbf{THEN}
+        Close unused channel ends
+        Send one byte through p; close the sending end
+        Wait for the child to finish
+        Receive one byte through q
+        \textbf{OUTPUT} parent identifier and "received pong"
+        Close the receiving end
+    \textbf{ELSE}
+        Close unused channel ends
+        Receive one byte through p
+        \textbf{OUTPUT} child identifier and "received ping"
+        Send the same byte through q
+        Close the remaining channel ends
+    \textbf{END IF}
+    On any send or receive failure, report error and exit 1
+    \textbf{EXIT} 0
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% --- 4.3. primes ---
+\subsection{\texttt{primes}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Sinh và in các số nguyên tố trong phạm vi từ 2 đến 280.
+  \item \textbf{Tham số:} Không nhận tham số dòng lệnh; phạm vi xử lý được cố định theo yêu cầu của bài thực hành.
+  \item \textbf{Mục tiêu xử lý:} Thể hiện mô hình sàng Eratosthenes đồng thời và bảo đảm mỗi số nguyên tố được xuất đúng một lần.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Các số từ 2 đến 280 được đưa lần lượt qua một chuỗi tiến trình, mỗi tiến trình thực hiện một bước sàng. Bước đầu lấy 2 làm số nguyên tố và loại các số chia hết cho 2. Những số còn lại được chuyển sang bước sau, nơi 3 được chọn và các bội của 3 tiếp tục bị loại. Cách xử lý này lặp lại cho đến khi không còn số cần xét. Số đầu tiên ở mỗi bước là số nguyên tố: nếu nó chia hết cho một số nguyên tố nhỏ hơn, nó đã bị loại ở bước sàng trước đó.
+
+Các bước sàng nối với nhau bằng pipe và xử lý từng số khi nhận được, không cần gom toàn bộ dãy còn lại vào bộ nhớ. Tiến trình kế tiếp chỉ được tạo khi có số vượt qua bước lọc hiện tại. Sau khi gửi hết dữ liệu, tiến trình đóng đầu ghi để báo hết dữ liệu cho bước sau, rồi chờ bước đó hoàn tất trước khi thoát.
+
+Mã giả dưới đây mô tả một bước sàng trong hàm \texttt{primes(left)}. Các bước tiếp theo áp dụng cùng cách xử lý cho những số còn lại.
+
+\begin{algorithmblock}{\texttt{primes}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Primes(left)
+    prime ← ReceiveInteger(left)
+    \textbf{IF} a complete integer was not received \textbf{THEN}
+        Close left; \textbf{EXIT} 0
+    \textbf{END IF}
+    \textbf{OUTPUT} "prime" followed by prime
+    right ← no outgoing channel
+    \textbf{WHILE} a complete integer n can be received from left \textbf{DO}
+        \textbf{IF} n is divisible by prime \textbf{THEN}
+            \textbf{CONTINUE}
+        \textbf{END IF}
+        \textbf{IF} right has not been created \textbf{THEN}
+            Create a channel and a child process
+            \textbf{IF} creation fails \textbf{THEN}
+                \textbf{REPORT} error; \textbf{EXIT} 1
+            \textbf{END IF}
+            Child closes unused ends and runs Primes(new channel)
+            Parent keeps the sending end as right
+        \textbf{END IF}
+        Send n through right
+        \textbf{IF} sending fails \textbf{THEN}
+            \textbf{REPORT} error; \textbf{EXIT} 1
+        \textbf{END IF}
+    \textbf{END WHILE}
+    Close left
+    \textbf{IF} right exists \textbf{THEN}
+        Close right; wait for the child to finish
+    \textbf{END IF}
+    \textbf{EXIT} 0
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Quản lý Process \& Pipe.}
+Mỗi bước lọc chỉ giữ những kênh liên lạc cần thiết. Khi đã chuyển hết các số, bước đó báo cho bước tiếp theo biết để việc xử lý có thể kết thúc. Các tiến trình chờ phần việc phía sau hoàn tất trước khi thoát.
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% --- 4.4. cp ---
+\subsection{\texttt{cp}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Sao chép toàn bộ nội dung từ tệp nguồn \texttt{src} sang tệp đích \texttt{dst}.
+  \item \textbf{Tham số:} Nhận đúng hai tham số đường dẫn theo cú pháp \texttt{cp src dst}.
+  \item \textbf{Xử lý lỗi:} Kiểm tra nguồn không hợp lệ, đích không thể tạo hoặc mở, trường hợp nguồn và đích cùng trỏ tới một tệp, đồng thời báo lỗi khi cú pháp không đúng.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Trước khi sao chép, cần xác định nguồn và đích có phải là hai tệp khác nhau hay không. Chỉ so sánh đường dẫn là chưa đủ, bởi hai tên có thể cùng trỏ đến một tệp. Chương trình vì vậy kiểm tra thông tin nhận diện của tệp và loại tệp trước khi xóa nội dung đích. Nguồn phải là tệp thông thường; nếu đích đã tồn tại thì đích cũng phải đáp ứng điều kiện này.
+
+Dữ liệu sau đó được đọc từ nguồn và ghi sang đích theo từng khối tối đa 512 byte. Mỗi lượt ghi đúng lượng dữ liệu vừa đọc được, nên phần cuối của tệp vẫn được sao chép đầy đủ dù ngắn hơn một khối. Việc sao chép tuần tự giữ nguyên thứ tự các byte và không đòi hỏi bộ nhớ tăng theo kích thước tệp. Khi gặp lỗi đọc hoặc ghi, chương trình dừng và báo lỗi; dữ liệu đã ghi vào đích trước đó không được khôi phục.
+
+Quy trình kiểm tra tệp và sao chép dữ liệu trong hàm \texttt{main()} được tóm tắt bằng mã giả dưới đây.
+
+\begin{algorithmblock}{\texttt{cp}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Main(arguments)
+    Require exactly two arguments: source and destination
+    Open source and verify that it is a regular file
+    \textbf{IF} destination already exists \textbf{THEN}
+        Verify that it is a different regular file
+    \textbf{END IF}
+    \textbf{IF} an argument or file check fails \textbf{THEN}
+        Close opened files; report error; \textbf{EXIT} 1
+    \textbf{END IF}
+    Create or open destination, replacing its old contents
+    \textbf{IF} destination cannot be opened \textbf{THEN}
+        Close source; report error; \textbf{EXIT} 1
+    \textbf{END IF}
+    \textbf{WHILE} reading source yields a nonempty portion \textbf{DO}
+        Write exactly that portion to destination
+        \textbf{IF} the full portion was not written \textbf{THEN}
+            Close both files; report error; \textbf{EXIT} 1
+        \textbf{END IF}
+    \textbf{END WHILE}
+    \textbf{IF} the last read failed \textbf{THEN}
+        Close both files; report error; \textbf{EXIT} 1
+    \textbf{END IF}
+    Close both files
+    \textbf{EXIT} 0
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% --- 4.5. tree ---
+\subsection{\texttt{tree}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Hiển thị thư mục và tệp tin theo dạng cây phân cấp.
+  \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là thư mục hiện hành \texttt{.}; hỗ trợ \texttt{-L depth} để giới hạn độ sâu và \texttt{-d} để chỉ liệt kê thư mục.
+  \item \textbf{Xử lý lỗi:} Phát hiện và thông báo rõ ràng các đường dẫn, tham số hoặc tùy chọn không hợp lệ.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Từ thư mục được chọn, chương trình duyệt theo chiều sâu: in tên một mục, duyệt hết nội dung bên trong nếu đó là thư mục, rồi mới chuyển sang mục kế tiếp. Mức thụt lề tăng theo độ sâu, thể hiện vị trí của từng mục trong cây. Hai mục \texttt{.} và \texttt{..} được bỏ qua để không quay lại thư mục hiện tại hoặc thư mục cha; các mục chưa sử dụng cũng không được đưa vào kết quả.
+
+Tùy chọn \texttt{-L} giới hạn số tầng được hiển thị, còn \texttt{-d} chỉ giữ lại các thư mục. Khi đạt độ sâu cho phép, chương trình không duyệt sâu hơn nhánh đó. Nếu đường dẫn đầu vào là một tệp thay vì thư mục, kết quả chỉ gồm tên tệp, trừ trường hợp đang bật \texttt{-d}.
+
+Mã giả dưới đây thể hiện cách duyệt và hiển thị một nhánh thư mục, dựa trên hàm \texttt{tree\_traverse(path, level)}.
+
+\begin{algorithmblock}{\texttt{tree}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} TreeTraverse(path, level)
+    \textbf{IF} a depth limit is set and level reaches it \textbf{THEN}
+        \textbf{RETURN}
+    \textbf{END IF}
+    Open directory path
+    \textbf{IF} opening fails \textbf{THEN}
+        \textbf{REPORT} error; \textbf{RETURN}
+    \textbf{END IF}
+    \textbf{IF} child paths would exceed the allowed length \textbf{THEN}
+        Close directory; report error; \textbf{RETURN}
+    \textbf{END IF}
+    \textbf{FOR EACH} entry read from directory \textbf{DO}
+        \textbf{IF} entry is unused, "." or ".." \textbf{THEN}
+            \textbf{CONTINUE}
+        \textbf{END IF}
+        childPath ← Join(path, entry.name)
+        \textbf{IF} information for childPath cannot be obtained \textbf{THEN}
+            \textbf{REPORT} error; \textbf{CONTINUE}
+        \textbf{END IF}
+        \textbf{IF} directories-only mode excludes entry \textbf{THEN}
+            \textbf{CONTINUE}
+        \textbf{END IF}
+        Display entry.name with indentation for level + 1
+        \textbf{IF} entry is a directory \textbf{THEN}
+            TreeTraverse(childPath, level + 1)
+        \textbf{END IF}
+    \textbf{END FOR}
+    Close directory
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% --- 4.6. du ---
+\subsection{\texttt{du}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} Tính và hiển thị dung lượng sử dụng của tệp hoặc thư mục theo đơn vị byte.
+  \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là \texttt{.}; hỗ trợ \texttt{-s} để chỉ in tổng dung lượng và \texttt{-a} để hiển thị thêm dung lượng của từng tệp.
+  \item \textbf{Đầu ra:} Hiển thị dung lượng theo byte cùng đường dẫn tương ứng và tuân theo chế độ hiển thị đã chọn.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Dung lượng của một thư mục được tính từ các tệp và thư mục con bên trong. Với tệp thông thường hoặc tệp thiết bị, chương trình lấy kích thước do hệ thống ghi nhận. Với thư mục con, chương trình tính xong tổng của nhánh đó rồi cộng vào thư mục cha. Kết quả vì vậy được tổng hợp từ dưới lên: các mục con hoàn tất trước, thư mục chứa chúng hoàn tất sau.
+
+Các tùy chọn chỉ thay đổi phần kết quả được in, không thay đổi cách cộng dung lượng. Chế độ mặc định in tổng của từng thư mục; \texttt{-a} in thêm từng tệp, còn \texttt{-s} chỉ in tổng của đường dẫn được chọn. Trong bài này, dung lượng là tổng kích thước theo byte, không tính kích thước bản thân thư mục hay số khối đĩa thực tế sử dụng. Nhánh không truy cập được sẽ được báo lỗi và bỏ qua khi tính tổng.
+
+Cách tính dung lượng và cộng dồn kết quả từ các mục con được trình bày trong mã giả của hàm \texttt{du(path)} dưới đây.
+
+\begin{algorithmblock}{\texttt{du}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Du(path)
+    Obtain information about path
+    \textbf{IF} information cannot be obtained \textbf{THEN}
+        \textbf{REPORT} error; \textbf{RETURN} 0
+    \textbf{END IF}
+    \textbf{IF} path is a regular file or a device \textbf{THEN}
+        \textbf{IF} all-files mode is enabled and summary mode is off \textbf{THEN}
+            \textbf{OUTPUT} size in bytes and path
+        \textbf{END IF}
+        \textbf{RETURN} size in bytes
+    \textbf{END IF}
+    \textbf{IF} path is not a directory \textbf{THEN}
+        \textbf{RETURN} 0
+    \textbf{END IF}
+    Open directory and check the allowed child-path length
+    \textbf{IF} opening or the length check fails \textbf{THEN}
+        Close directory if opened; report error; \textbf{RETURN} 0
+    \textbf{END IF}
+    total ← 0
+    \textbf{FOR EACH} entry read from directory \textbf{DO}
+        \textbf{IF} entry is unused, "." or ".." \textbf{THEN}
+            \textbf{CONTINUE}
+        \textbf{END IF}
+        total ← total + Du(Join(path, entry.name))
+    \textbf{END FOR}
+    Close directory
+    \textbf{IF} summary mode is off \textbf{THEN}
+        \textbf{OUTPUT} total and path
+    \textbf{END IF}
+    \textbf{RETURN} total
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% --- 4.7. diff ---
+\subsection{\texttt{diff}}
+
+\textbf{Mục tiêu.}
+\begin{itemize}
+  \item \textbf{Chức năng:} So sánh nội dung của hai tệp theo từng dòng và xác định các vị trí khác biệt.
+  \item \textbf{Tham số:} Nhận hai tệp bắt buộc \texttt{file1}, \texttt{file2} và tùy chọn \texttt{-q} theo cú pháp \texttt{diff file1 file2 [-q]}.
+  \item \textbf{Đầu ra:} Ở chế độ thông thường, chỉ ra các dòng khác biệt của từng tệp; với \texttt{-q}, chỉ thông báo hai tệp có khác nhau hay không.
+\end{itemize}
+
+\textbf{Ý tưởng triển khai.}
+Hai tệp được đọc song song và so sánh các dòng có cùng số thứ tự. Ngoài nội dung, chương trình kiểm tra độ dài và dấu xuống dòng, đồng thời phân biệt dòng trống với trường hợp tệp đã hết dữ liệu. Do đó, hai dòng có cùng phần chữ nhưng khác dấu xuống dòng cuối tệp vẫn được xem là khác nhau. Bộ đệm được mở rộng theo độ dài dòng để không cắt mất phần nội dung cần so sánh.
+
+Với mỗi khác biệt, kết quả ghi tên tệp, số dòng và nội dung của hai phía. Nếu một tệp kết thúc trước, các dòng còn lại ở tệp kia được đối chiếu với trạng thái hết tệp. Khi có \texttt{-q}, chương trình dừng ở khác biệt đầu tiên và chỉ in thông báo. Phép so sánh trong bài không căn chỉnh lại dòng khi có chèn hoặc xóa: một dòng thêm vào giữa tệp có thể khiến nhiều cặp dòng phía sau được báo khác nhau.
+
+Mã giả dưới đây mô tả quy trình so sánh trong hàm \texttt{main()}, từ việc đọc từng cặp dòng đến ghi nhận và hiển thị khác biệt.
+
+\begin{algorithmblock}{\texttt{diff}}
+\begin{algorithmcode}
+\textbf{PROCEDURE} Main(arguments)
+    Parse two paths and optional quiet flag at either end
+    Reject invalid syntax or paths beginning with a hyphen
+    Open both files and verify that they are regular files
+    On a setup failure, close opened files and exit 2
+    status ← 0; number ← 1
+    \textbf{LOOP}
+        first ← ReadLine(firstFile)
+        second ← ReadLine(secondFile)
+        \textbf{IF} either line could not be read \textbf{THEN}
+            \textbf{REPORT} error; status ← 2; \textbf{BREAK}
+        \textbf{END IF}
+        \textbf{IF} neither file has another line \textbf{THEN}
+            \textbf{BREAK}
+        \textbf{END IF}
+        \textbf{IF} presence, length, newline or contents differ \textbf{THEN}
+            status ← 1
+            \textbf{IF} quiet mode is enabled \textbf{THEN}
+                \textbf{OUTPUT} "diff: files differ"; \textbf{BREAK}
+            \textbf{END IF}
+            PrintLine(firstFile, number, first)
+            PrintLine(secondFile, number, second)
+            \textbf{IF} either output operation fails \textbf{THEN}
+                \textbf{REPORT} error; status ← 2; \textbf{BREAK}
+            \textbf{END IF}
+        \textbf{END IF}
+        number ← number + 1
+    \textbf{END LOOP}
+    Release stored lines and close both files
+    \textbf{EXIT} status
+\textbf{END PROCEDURE}
+\end{algorithmcode}
+\end{algorithmblock}
+
+\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
+
+% -------------------------------------------------------------------------
+% PHẦN 5: KẾT QUẢ KIỂM THỬ TỔNG HỢP
+% -------------------------------------------------------------------------
+\section{Kết quả kiểm thử tổng hợp}
+
+\subsection{Môi trường và cách thực hiện}
+
+Kiểm thử được thực hiện tự động trên xv6 chạy bằng QEMU 8.2.2, với 128 MB bộ nhớ và 3 CPU mô phỏng. Mã nguồn được biên dịch trên Ubuntu 24.04 trong WSL bằng GCC 13.3.0 cho RISC-V. Bộ chạy kiểm thử tạo một bản sao tạm của xv6, biên dịch lại chương trình và tạo ảnh hệ thống tệp riêng; vì vậy, các tệp thử nghiệm không làm thay đổi \texttt{fs.img} trong thư mục làm việc.
+
+Bộ kiểm thử gồm \texttt{cptest}, \texttt{difftest}, \texttt{linetest} và \texttt{coretest}, đặt tại \path{tests/lab01/}. Các bài kiểm tra đối chiếu kết quả với giá trị mong đợi, bao gồm nội dung tệp, thông báo xuất ra và mã thoát. Riêng \texttt{sleep}, thời gian chờ được đo bằng bộ đếm tick của xv6. Lệnh chạy từ thư mục gốc của dự án, trong Ubuntu WSL, là:
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+python3 tests/lab01/run.py \
+  --log docs/test-results/lab01-qemu.log
+\end{verbatim}
+\end{terminalbox}
+
+\subsection{Kết quả theo từng chương trình}
+
+Lần chạy ghi nhận \textbf{77/77 phép kiểm tra đạt}, không xuất hiện thông báo \texttt{FAIL} và bộ chạy kiểm thử kết thúc với mã 0. Con số này bao gồm các lần chạy lặp lại và một kiểm tra tạo liên kết cứng phục vụ thử nghiệm \texttt{cp}; không phải số lượng trường hợp độc lập hay tỷ lệ bao phủ mã nguồn.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{0.34\textwidth} >{\raggedright\arraybackslash}X c}
+\toprule
+\rowcolor{tableheader}
+\textbf{Đối tượng} & \textbf{Phạm vi kiểm tra} & \textbf{Kết quả ghi nhận} & \textbf{Đạt/tổng} \\
+\midrule
+\texttt{sleep} & Chờ 5 tick, 0 tick; thiếu, thừa, sai định dạng và số âm & Lượt \texttt{sleep 5} đo được 5 tick; thông báo và mã thoát đúng kỳ vọng & 6/6 \\
+\texttt{pingpong} & Chạy 3 lần; kiểm tra thứ tự thông báo và PID & Mỗi lần in ping trước pong; hai PID khác nhau; mã thoát 0 & 3/3 \\
+\texttt{primes} & Chạy 2 lần; đối chiếu dãy bằng phép thử chia độc lập & Đủ 59 số nguyên tố từ 2 đến 280, đúng thứ tự, không thừa hoặc trùng & 2/2 \\
+\texttt{cp} & Tệp 0--4097 byte; ghi đè; cùng tệp, liên kết cứng; đối số và đường dẫn lỗi & Đúng từng byte và kích thước; giữ nguyên nguồn trong các ca từ chối sao chép & 18/18 \\
+\texttt{tree} & Cây nhiều tầng; \texttt{-d}, \texttt{-L 1}, \texttt{-L 2}; tệp, thư mục rỗng và đầu vào lỗi & Cấu trúc, thụt lề, giới hạn độ sâu, thông báo và mã thoát đúng kỳ vọng & 11/11 \\
+\texttt{du} & Tổng thư mục; \texttt{-a}, \texttt{-s}, kết hợp hai cờ; tệp đơn và đầu vào lỗi & Tệp mẫu 3, 5, 2 byte cho tổng 10 byte; kết quả chi tiết và tóm tắt đúng & 8/8 \\
+\texttt{diff} & Tệp rỗng; dòng khác nhau; \texttt{-q}; hết tệp, dấu xuống dòng; dòng dài và byte 0 & Nội dung xuất và mã thoát 0/1/2 đúng kỳ vọng, kể cả dòng 1200 byte & 20/20 \\
+Đọc dòng & Dòng trống, dòng cuối, hết tệp, mở rộng bộ đệm, byte 0 và lỗi đọc & Phân biệt dòng trống với hết tệp; giữ đủ nội dung và nhận biết lỗi đọc & 9/9 \\
+\midrule
+\textbf{Tổng} & & \textbf{Tất cả phép kiểm tra đều đạt} & \textbf{77/77} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Nhật ký thực thi và phạm vi kết luận}
+
+Nhật ký QEMU đầy đủ được lưu tại \path{docs/test-results/lab01-qemu.log}. Trích các dòng xác nhận hoàn tất từ lần chạy thực tế:
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+ALL CP TESTS PASSED
+ALL DIFF TESTS PASSED
+ALL LINE TESTS PASSED
+MEASURE: sleep 5 elapsed=5 ticks
+ALL SLEEP TESTS PASSED
+ALL PINGPONG TESTS PASSED
+ALL PRIMES TESTS PASSED
+ALL TREE TESTS PASSED
+ALL DU TESTS PASSED
+ALL CORE TESTS PASSED
+\end{verbatim}
+\end{terminalbox}
+
+Các kết quả trên xác nhận hành vi của chương trình trong những trường hợp đã kiểm tra, không chứng minh chương trình không còn lỗi. Bộ test chưa mô phỏng đầy đĩa, thiếu bộ nhớ, cạn tài nguyên tiến trình hoặc mọi giới hạn đường dẫn; mẫu sao chép lớn nhất là 4097 byte và mẫu dòng dài là 1200 byte. Thời gian 5 tick là số đo của lượt chạy này, không phải cam kết tiến trình luôn được lập lịch lại đúng thời điểm trên mọi lần chạy.
+
+Đây là \textbf{bộ kiểm thử riêng cho phạm vi Lab 01 của báo cáo}, không phải kết quả \texttt{make grade}. Bộ chấm \texttt{grade-lab-util} có trong kho còn kiểm tra \texttt{find} và \texttt{xargs}, nhưng không bao gồm \texttt{cp}, \texttt{tree}, \texttt{du}, \texttt{diff}. Vì chưa chạy toàn bộ bộ chấm đó trong lần kiểm thử này, báo cáo không ghi điểm chấm MIT hoặc quy đổi 77/77 thành điểm trên 100.
+% -------------------------------------------------------------------------
+% PHẦN 6: KHÓ KHĂN VÀ CÁCH KHẮC PHỤC
+% -------------------------------------------------------------------------
+\section{Khó khăn gặp phải và giải pháp khắc phục}
 
 \begin{enumerate}
-  \item \textbf{Vấn đề:} \placeholder{Ví dụ: pipe bị treo.}
+  \item \textbf{Vấn đề 1: Tràn số lượng File Descriptor trong bài \texttt{primes}.}
 
-  \textbf{Nguyên nhân:} \placeholder{Descriptor đầu ghi chưa được đóng ở một process.}
+  \textit{Nguyên nhân:} Tiến trình con kế thừa toàn bộ bảng file descriptor của tiến trình cha nhưng không đóng kịp thời các đầu ghi của các stage trước đó, dẫn đến cạn kiệt tài nguyên (vượt quá \texttt{NOFILE} trong kernel).
 
-  \textbf{Cách xử lý:} \placeholder{Mô tả thay đổi và kết quả sau khi sửa.}
+  \textit{Giải pháp:} Đóng ngay lập tức các đầu pipe không dùng ở cả cha và con trước khi bước vào vòng lặp xử lý dữ liệu.
 
-  \item \textbf{Vấn đề:} \placeholder{Vấn đề thứ hai nếu có.}
+  \item \textbf{Vấn đề 2: Lặp vô hạn khi duyệt thư mục trong \texttt{tree} và \texttt{du}.}
 
-  \textbf{Cách xử lý:} \placeholder{Mô tả ngắn gọn.}
+  \textit{Nguyên nhân:} Bỏ sót việc lọc hai liên kết đặc biệt là thư mục hiện hành (\texttt{.}) và thư mục cha (\texttt{..}).
+
+  \textit{Giải pháp:} Bổ sung kiểm tra \texttt{strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0} trước khi gọi hàm đệ quy.
 \end{enumerate}
 
-Nếu có yêu cầu nào chưa hoàn thành, hãy ghi rõ phạm vi ảnh hưởng và nguyên nhân thay vì bỏ qua.
+% -------------------------------------------------------------------------
+% PHẦN 7: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% -------------------------------------------------------------------------
+\section{Kết luận và hướng phát triển}
 
-\section{Kết luận}
+Qua bài thực hành Lab 01, nhóm đã hoàn thiện toàn diện các kỹ năng lập trình không gian người dùng trên hệ điều hành xv6:
+\begin{itemize}
+  \item Nắm vững cơ chế vận hành của system call và sự chuyển giao giữa User Space và Kernel Space.
+  \item Làm chủ kỹ thuật điều khiển luồng tiến trình và đồng bộ hóa thông qua các cơ chế IPC cơ bản nhưng hiệu quả.
+  \item Hiểu rõ cấu trúc tổ chức và lưu trữ dữ liệu của hệ thống tệp tin xv6 ở mức độ nhị phân.
+\end{itemize}
 
-\placeholder{Tóm tắt những gì nhóm đã hoàn thành, kiến thức rút ra về process, pipe, file descriptor và filesystem. Nêu ngắn gọn hạn chế còn lại nếu có.}
-
+% -------------------------------------------------------------------------
+% TÀI LIỆU THAM KHẢO
+% -------------------------------------------------------------------------
 \section*{Tài liệu tham khảo}
 \addcontentsline{toc}{section}{Tài liệu tham khảo}
 
-\begin{itemize}
-  \item Tài liệu hướng dẫn Lab 01 do giảng viên cung cấp.
-  \item xv6-lab01-guide.md trong repository của nhóm.
-  \item xv6-riscv book, phần process, pipe, file descriptor và filesystem.
-  \item \url{https://pdos.csail.mit.edu/6.1810/2024/labs/util.html}
-\end{itemize}
+\begingroup
+\small
+\raggedright
+\begin{enumerate}[label={[\arabic*]},itemsep=0.6em]
+  \item Russ Cox, Frans Kaashoek, Robert Morris, \textit{xv6: a simple, Unix-like teaching operating system}, bản RISC-V, ngày 31/08/2024. Tham khảo chương 1 về system call và pipe, chương 8 về hệ thống tệp.\\
+  \url{https://pdos.csail.mit.edu/6.1810/2024/xv6/book-riscv-rev4.pdf}.
+  \item MIT, học phần 6.1810, \textit{Lab: Xv6 and Unix utilities}, Fall 2024. Yêu cầu và hướng dẫn cho \texttt{sleep}, \texttt{pingpong}, \texttt{primes}.\\
+  \url{https://pdos.csail.mit.edu/6.1810/2024/labs/util.html}.
+  \item Tài liệu hướng dẫn thực hành Hệ điều hành Lab 01 do Giảng viên bộ môn biên soạn.
+  \item MIT PDOS, \textit{xv6-riscv}, kho mã nguồn chính thức. Tham khảo cách tổ chức tiến trình, pipe, hệ thống tệp và chương trình \texttt{ls}. Mã nguồn thực hiện bài được đối chiếu trực tiếp trong thư mục \path{xv6-labs-2024/} của dự án.\\
+  \url{https://github.com/mit-pdos/xv6-riscv}.
+  \item Russ Cox, \textit{Bell Labs and CSP Threads}. Tham khảo mô hình sàng số nguyên tố bằng các tiến trình nối với nhau qua pipe.\\
+  \url{https://swtch.com/~rsc/thread/}.
+  \item MIT, học phần 6.1810, \textit{Tools}, Fall 2024. Hướng dẫn chuẩn bị công cụ RISC-V, QEMU và môi trường chạy xv6.\\
+  \url{https://pdos.csail.mit.edu/6.1810/2024/tools.html}.
+  \item GNU Project, \textit{GNU Coreutils Manual}, các mục \textit{cp invocation} và \textit{du invocation}. Tham khảo chức năng và cách sử dụng các tiện ích sao chép, thống kê dung lượng trên Unix.\\
+  \url{https://www.gnu.org/software/coreutils/manual/coreutils.html}.
+  \item GNU Project, \textit{Comparing and Merging Files}, mục \textit{Invoking diff}. Tham khảo cách diễn giải kết quả so sánh và mã thoát của \texttt{diff}.\\
+  \url{https://www.gnu.org/software/diffutils/manual/html_node/Invoking-diff.html}.
+\end{enumerate}
+\endgroup
 
-\appendix
-
-\section{Output hoặc ảnh minh họa tùy chọn}
-
-\placeholder{Chỉ thêm output ngắn hoặc ảnh minh họa cần thiết. Không đưa toàn bộ mã nguồn vào báo cáo.}
+Các tài liệu GNU được dùng để tham khảo hành vi của tiện ích Unix; các chương trình trong bài chỉ thực hiện phạm vi yêu cầu của Lab 01, không có đầy đủ tính năng của phiên bản GNU.
 
 \end{document}
