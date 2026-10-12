@@ -204,11 +204,11 @@ File System\par}
 ]
 \renewcommand{\arraystretch}{1.35}
 \begin{tabular}{r l}
-\textbf{Lớp học phần:} & \placeholder{Mã lớp / Tên lớp} \\
+\textbf{Lớp học phần:} & Hệ điều hành - CQ2024/22 \\
 \textbf{Sinh viên:} & 24120438 -- Trần Nguyên Tân \\
                      & 24120023 -- Nguyễn Thành Bảo \\
                      & 24120040 -- Dương Hoài Đức \\
-\textbf{Giảng viên:} & \placeholder{ThS./TS. Tên giảng viên} \\
+\textbf{Giảng viên:} & ThS. Lê Viết Long \\
 \end{tabular}
 \end{tcolorbox}
 
@@ -237,19 +237,13 @@ Báo cáo này trình bày kết quả thực hiện, thiết kế kỹ thuật 
 
 Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây dựng mã giả và hiện thực thành công toàn bộ \textbf{07 chương trình tiện ích}:
 \begin{itemize}
-  \item \textbf{Phân nhóm Tiến trình \& IPC:}
-    \begin{itemize}
-      \item \texttt{sleep}: Tạm dừng tiến trình theo chu kỳ đồng hồ (\textit{ticks}) của hệ thống.
-      \item \texttt{pingpong}: Hiện thực cơ chế giao tiếp 2 chiều đồng bộ giữa tiến trình cha và con thông qua cặp đường ống (\textit{pipes}).
-      \item \texttt{primes}: Xây dựng thuật toán sàng số nguyên tố Eratosthenes đồng thời (\textit{Concurrent Prime Sieve}) theo mô hình pipeline đa tiến trình kết nối liên tiếp từ 2 đến 280.
-    \end{itemize}
-  \item \textbf{Phân nhóm Tệp tin \& Duyệt hệ thống tệp:}
-    \begin{itemize}
-      \item \texttt{cp}: Sao chép dữ liệu tập tin an toàn qua bộ đệm (\textit{buffer streaming}), xử lý kiểm tra trùng tệp nguồn/đích.
-      \item \texttt{tree}: Duyệt đệ quy cây thư mục hiển thị phân cấp trực quan, hỗ trợ giới hạn độ sâu (\texttt{-L}) và lọc thư mục (\texttt{-d}).
-      \item \texttt{du}: Ước tính dung lượng sử dụng đĩa (\textit{Disk Usage}) theo byte, hỗ trợ tính tổng nhanh (\texttt{-s}) và liệt kê chi tiết tệp (\texttt{-a}).
-      \item \texttt{diff}: So sánh nội dung hai tệp tin theo từng dòng, xử lý so khớp EOF và chế độ thông báo tóm tắt (\texttt{-q}).
-    \end{itemize}
+    \item \texttt{sleep}: Tạm dừng tiến trình theo chu kỳ đồng hồ (\textit{ticks}) của hệ thống.
+    \item \texttt{pingpong}: Hiện thực cơ chế giao tiếp 2 chiều đồng bộ giữa tiến trình cha và con thông qua cặp đường ống (\textit{pipes}).
+    \item \texttt{primes}: Xây dựng thuật toán sàng số nguyên tố Eratosthenes đồng thời (\textit{Concurrent Prime Sieve}) theo mô hình pipeline đa tiến trình kết nối liên tiếp từ 2 đến 280.
+    \item \texttt{cp}: Sao chép dữ liệu tập tin an toàn qua bộ đệm (\textit{buffer streaming}), xử lý kiểm tra trùng tệp nguồn/đích.
+    \item \texttt{tree}: Duyệt đệ quy cây thư mục hiển thị phân cấp trực quan, hỗ trợ giới hạn độ sâu (\texttt{-L}) và lọc thư mục (\texttt{-d}).
+    \item \texttt{du}: Ước tính dung lượng sử dụng đĩa (\textit{Disk Usage}) theo byte, hỗ trợ tính tổng nhanh (\texttt{-s}) và liệt kê chi tiết tệp (\texttt{-a}).
+    \item \texttt{diff}: So sánh nội dung hai tệp tin theo từng dòng, xử lý so khớp EOF và chế độ thông báo tóm tắt (\texttt{-q}).
 \end{itemize}
 
 \begin{notebox}
@@ -257,7 +251,7 @@ Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây 
 \begin{itemize}
   \item \textbf{Tỷ lệ hoàn thành:} $7/7$ chương trình ($100\%$ khối lượng yêu cầu).
   \item \textbf{Độ tin cậy \& Quản lý tài nguyên:} Tất cả các chương trình đều được kiểm thử nghiêm ngặt trên trình giả lập QEMU, kiểm soát chặt chẽ việc giải phóng bộ mô tả tập tin (không rò rỉ File Descriptor), đóng đúng các đầu pipe thừa để kích hoạt tín hiệu EOF chính xác, và đồng bộ hóa triệt để bằng \texttt{wait()} nhằm loại bỏ hoàn toàn nguy cơ sinh tiến trình ma (\textit{zombie process}).
-  \item \textbf{Kiểm thử tự động:} Đáp ứng đầy đủ các ca kiểm thử chức năng và trường hợp biên lỗi theo chuẩn kịch bản kiểm thử của môn học.
+  \item \textbf{Kiểm thử tự động:} Đáp ứng đầy đủ các trường hợp kiểm thử chức năng và edge cases lỗi theo chuẩn kịch bản kiểm thử của môn học.
 \end{itemize}
 \end{notebox}
 
@@ -280,8 +274,6 @@ Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây 
 \end{tabularx}
 \end{center}
 
-\textbf{Phương thức phối hợp nhóm:} \placeholder{Mô tả ngắn gọn quy trình làm việc: phân chia nhánh trên Git (feature branches), viết pull request, review code chéo và kiểm thử tích hợp trên môi trường chung.}
-
 % -------------------------------------------------------------------------
 % PHẦN 2: MÔI TRƯỜNG THỰC HIỆN
 % -------------------------------------------------------------------------
@@ -289,9 +281,9 @@ Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây 
 
 Do xv6 trong bài thực hành chạy trên kiến trúc RISC-V. Máy chủ đảm nhiệm việc biên dịch mã nguồn, còn QEMU mô phỏng phần cứng để khởi động xv6. Vì vậy, dù dùng Windows hay macOS, môi trường cần có trình biên dịch chéo RISC-V, bộ công cụ liên kết và QEMU; trình biên dịch C mặc định của máy không thay thế được bộ công cụ RISC-V.
 
-\subsection{Windows: Ubuntu trên WSL 2}
+\subsection{Windows: cài đặt Ubuntu và các dependencies trên WSL 2}
 
-Trên Windows, quá trình biên dịch và kiểm thử được thực hiện trong Ubuntu trên WSL 2. Cách tổ chức này giữ được môi trường Linux theo yêu cầu bài thực hành mà vẫn cho phép soạn thảo tài liệu và quản lý mã nguồn từ Windows. Hướng dẫn MIT yêu cầu WSL 2 và QEMU từ phiên bản 7.2; Ubuntu 24.04 được chọn để thuận tiện cài các gói phù hợp từ kho hệ thống [6].
+Trên Windows, quá trình biên dịch và kiểm thử được thực hiện trong Ubuntu trên WSL 2. Cách tổ chức này giữ được môi trường Linux theo yêu cầu bài thực hành mà vẫn cho phép soạn thảo tài liệu và quản lý mã nguồn từ Windows. Từ hướng dẫn của MIT, nhóm xác định sử dụng WSL 2 và QEMU từ phiên bản 7.2; Ubuntu phiên bản 24.04 để thuận tiện cài các gói phù hợp [6].
 
 \textbf{Cài đặt WSL.} Mở PowerShell với quyền Administrator, cài Ubuntu rồi khởi động lại máy nếu được yêu cầu. Khi mở Ubuntu lần đầu, tạo tài khoản và mật khẩu Linux. Các lệnh dưới đây áp dụng cho Windows 10 phiên bản 2004 trở lên hoặc Windows 11 [9].
 
@@ -302,8 +294,6 @@ wsl --install -d Ubuntu-24.04
 wsl --list --verbose
 \end{verbatim}
 \end{terminalbox}
-
-Trong kết quả kiểm tra, bản phân phối Ubuntu cần có giá trị 2 ở cột \texttt{VERSION}. Từ bước tiếp theo, các lệnh được chạy trong terminal Ubuntu, không phải PowerShell.
 
 \textbf{Cài công cụ phát triển.} GCC và Binutils cho RISC-V dùng để tạo chương trình chạy trên xv6; \texttt{build-essential} cung cấp công cụ biên dịch phía máy chủ, QEMU chạy máy mô phỏng, còn Python dùng cho bộ kiểm thử của dự án. \texttt{gdb-multiarch} hỗ trợ gỡ lỗi khi cần.
 
@@ -322,7 +312,7 @@ python3 --version
 \end{terminalbox}
 
 
-\subsection{macOS: công cụ RISC-V qua Homebrew}
+\subsection{macOS: cài đặt công cụ RISC-V qua Homebrew}
 
 Trên macOS, có thể biên dịch trực tiếp trong Terminal và chạy xv6 bằng QEMU. Trước hết, cài Command Line Tools để có công cụ phát triển phía máy chủ, sau đó cài Homebrew theo hướng dẫn chính thức [10].
 
@@ -354,7 +344,7 @@ Bộ công cụ này có tiền tố \texttt{riscv64-elf-}, trong khi \texttt{Ma
 
 \subsection{Chuẩn bị mã nguồn và khởi chạy xv6}
 
-Nhóm đã sử dụng mã nguồn trong folder \path{xv6-labs-2024/} của dự án. Nếu nhận bài dưới dạng tệp nén, cần giải nén đầy đủ thư mục này cùng \path{tests/}; không thay bằng một phiên bản xv6 khác vì cấu hình và giao diện có thể khác nhau.
+Nhóm đã sử dụng mã nguồn trong folder \path{xv6-labs-2024/} của dự án, source code của xv6 được clone từ \path{git://g.csail.mit.edu/xv6-labs-2024}
 
 Từ thư mục gốc dự án, chạy các lệnh sau để biên dịch:
 
@@ -376,7 +366,7 @@ make TOOLPREFIX=riscv64-elf- qemu
 \end{verbatim}
 \end{terminalbox}
 
-Môi trường sẵn sàng khi xv6 khởi động, in \texttt{init: starting sh} và hiện dấu nhắc shell. Khi đó có thể chạy \texttt{sleep 10}, \texttt{pingpong} hoặc \texttt{primes} để kiểm tra bước đầu. Để thoát QEMU, nhấn \texttt{Ctrl+A}, thả phím rồi nhấn \texttt{X}.
+Môi trường sẵn sàng khi xv6 khởi động sẽ xuất hiện \texttt{init: starting sh} và dấu nhắc shell. Khi đó ta có thể chạy các lệnh \texttt{sleep 10}, \texttt{pingpong} hoặc \texttt{primes} để kiểm tra bước đầu. Để thoát QEMU, nhấn \texttt{Ctrl+A}, thả phím rồi nhấn \texttt{X}.
 
 Các chương trình người dùng được khai báo trong \texttt{UPROGS} của \texttt{Makefile}. Ví dụ, tệp dựng \path{user/_sleep} được đưa vào \texttt{fs.img} với tên \texttt{sleep}; khi chạy trong shell xv6 không thêm dấu gạch dưới. Các tệp tạo trong xv6 thuộc ảnh đĩa này, không xuất hiện như tệp thông thường trong thư mục máy chủ. Lệnh \texttt{make clean} xóa sản phẩm biên dịch và ảnh đĩa, nên cần lưu dữ liệu thử nghiệm quan trọng trước khi dọn bản dựng.
 
@@ -389,13 +379,9 @@ python3 tests/lab01/run.py --toolprefix=riscv64-elf-
 \end{verbatim}
 \end{terminalbox}
 
-Bộ chạy tạo bản sao tạm để biên dịch và kiểm thử, không thay đổi \texttt{fs.img} đang làm việc. Kết quả ở mục 5 là kết quả bộ kiểm thử này, không phải điểm từ \texttt{make grade}.
-
-\textbf{Lưu ý khi gặp lỗi thiết lập.} Nếu không tìm thấy compiler, kiểm tra tên chương trình, \texttt{PATH} và \texttt{TOOLPREFIX}. Nếu biên dịch dừng ở \path{user/usertests.c}, cần đọc thông báo compiler trước khi xử lý QEMU. Tài liệu bàn giao ghi nhận GCC 16 trên macOS báo \texttt{unused-but-set-variable} trong phần kiểm thử có sẵn; riêng trường hợp đó, có thể truyền giá trị \texttt{-Wno-error=unused-but-set-variable} qua tùy chọn \texttt{--extra-cflags} của bộ chạy. Tùy chọn chỉ hạ mức lỗi của cảnh báo này, không tắt toàn bộ kiểm tra biên dịch. Tệp \path{docs/fix-qemu.txt} ghi lại một cách xử lý QEMU trên Ubuntu; các lệnh gỡ gói và thêm kho trong đó không phải bước cài đặt bắt buộc và không áp dụng cho macOS.
-
 \subsection{Môi trường dùng để ghi nhận kết quả}
 
-Lượt kiểm thử được báo cáo ở mục 5 sử dụng Ubuntu 24.04 trong WSL, GCC RISC-V 13.3.0 và QEMU 8.2.2. Đây là môi trường đã tạo ra kết quả 77/77 ca kiểm thử của báo cáo. Phần macOS trình bày cách thiết lập tương ứng, có đối chiếu tài liệu bàn giao và hướng dẫn chính thức; báo cáo không xem đó là một lượt xác nhận lại toàn bộ 77 ca trên macOS.
+Các thao tác kiểm thử được báo cáo ở mục 5 được thực hiện trong Ubuntu 24.04 qua WSL, với môi trường cài đặt GCC RISC-V 13.3.0 và QEMU 8.2.2. Đây là môi trường đã tạo ra kết quả 77/77 ca kiểm thử của báo cáo.
 
 % -------------------------------------------------------------------------
 % PHẦN 3: KIẾN THỨC NỀN TẢNG
