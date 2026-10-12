@@ -34,6 +34,7 @@
 \usepackage{fancyvrb}
 \usepackage{lastpage}
 \usepackage{microtype}
+\usepackage{tikz}
 \tcbuselibrary{skins,breakable}
 
 % --- Bảng màu chuyên nghiệp ---
@@ -232,7 +233,7 @@ File System\par}
 \section*{Tóm tắt báo cáo}
 \addcontentsline{toc}{section}{Tóm tắt báo cáo}
 
-Báo cáo này trình bày kết quả thực hiện, thiết kế kỹ thuật và quá trình kiểm thử toàn diện các chương trình tiện ích không gian người dùng (\textit{User Programs}) trong khuôn khổ bài thực hành \textbf{Lab 01 (Hệ điều hành xv6 -- Kiến trúc RISC-V)}. Mục tiêu trọng tâm của bài thực hành là tiếp cận kiến trúc phân tầng người dùng/nhân (\textit{User/Kernel Space}), vận dụng các system call cơ bản, cơ chế quản lý vòng đời tiến trình, truyền thông liên tiến trình (IPC) và các thao tác truy xuất hệ thống tệp tin (\textit{File System}).
+Báo cáo này trình bày kết quả thực hiện, thiết kế kỹ thuật và quá trình kiểm thử toàn diện các chương trình tiện ích không gian người dùng (\textit{User Programs}) trong khuôn khổ bài thực hành \textbf{Lab 01 (Hệ điều hành xv6 -- Kiến trúc RISC-V)}. Mục tiêu trọng tâm của bài thực hành là tiếp cận kiến trúc phân tầng người dùng/kernel (\textit{User/Kernel Space}), vận dụng các system call cơ bản, cơ chế quản lý vòng đời tiến trình, truyền thông liên tiến trình (IPC) và các thao tác truy xuất hệ thống tệp tin (\textit{File System}).
 
 Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây dựng mã giả và hiện thực thành công toàn bộ \textbf{07 chương trình tiện ích}:
 \begin{itemize}
@@ -284,75 +285,349 @@ Trong suốt quá trình thực hiện, nhóm đã phân tích yêu cầu, xây 
 % -------------------------------------------------------------------------
 % PHẦN 2: MÔI TRƯỜNG THỰC HIỆN
 % -------------------------------------------------------------------------
-\section{Môi trường thực hiện và kiểm thử}
+\section{Thiết lập môi trường trên Windows và macOS}
 
-\begin{itemize}
-  \item \textbf{Hệ điều hành chủ / máy ảo:} \placeholder{Ubuntu 24.04 LTS trên WSL2 (Windows 11) / Linux / macOS}
-  \item \textbf{Trình biên dịch (Toolchain):} \texttt{\placeholder{riscv64-linux-gnu-gcc (GCC 12.x / 13.x)}}
-  \item \textbf{Trình giả lập phần cứng:} \texttt{\placeholder{QEMU emulator version 8.x.x (qemu-system-riscv64)}}
-  \item \textbf{Kho mã nguồn \& nhánh làm việc:} \texttt{\placeholder{Nhánh main / commit SHA...}}
-  \item \textbf{Quy trình biên dịch và khởi chạy:}
-    \begin{itemize}
-      \item Dọn dẹp bản dựng: \texttt{make clean}
-      \item Biên dịch và khởi chạy máy ảo: \texttt{make qemu}
-      \item Chạy toàn bộ bài chấm điểm: \texttt{make grade}
-    \end{itemize}
-\end{itemize}
+Do xv6 trong bài thực hành chạy trên kiến trúc RISC-V. Máy chủ đảm nhiệm việc biên dịch mã nguồn, còn QEMU mô phỏng phần cứng để khởi động xv6. Vì vậy, dù dùng Windows hay macOS, môi trường cần có trình biên dịch chéo RISC-V, bộ công cụ liên kết và QEMU; trình biên dịch C mặc định của máy không thay thế được bộ công cụ RISC-V.
 
-\textbf{Kết quả xác nhận môi trường thực thi:}
+\subsection{Windows: Ubuntu trên WSL 2}
+
+Trên Windows, quá trình biên dịch và kiểm thử được thực hiện trong Ubuntu trên WSL 2. Cách tổ chức này giữ được môi trường Linux theo yêu cầu bài thực hành mà vẫn cho phép soạn thảo tài liệu và quản lý mã nguồn từ Windows. Hướng dẫn MIT yêu cầu WSL 2 và QEMU từ phiên bản 7.2; Ubuntu 24.04 được chọn để thuận tiện cài các gói phù hợp từ kho hệ thống [6].
+
+\textbf{Cài đặt WSL.} Mở PowerShell với quyền Administrator, cài Ubuntu rồi khởi động lại máy nếu được yêu cầu. Khi mở Ubuntu lần đầu, tạo tài khoản và mật khẩu Linux. Các lệnh dưới đây áp dụng cho Windows 10 phiên bản 2004 trở lên hoặc Windows 11 [9].
 
 \begin{terminalbox}
 \small
 \begin{verbatim}
-$ riscv64-linux-gnu-gcc --version
-riscv64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
-
-$ qemu-system-riscv64 --version
-QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.2)
+wsl --install -d Ubuntu-24.04
+wsl --list --verbose
 \end{verbatim}
 \end{terminalbox}
 
+Trong kết quả kiểm tra, bản phân phối Ubuntu cần có giá trị 2 ở cột \texttt{VERSION}. Từ bước tiếp theo, các lệnh được chạy trong terminal Ubuntu, không phải PowerShell.
+
+\textbf{Cài công cụ phát triển.} GCC và Binutils cho RISC-V dùng để tạo chương trình chạy trên xv6; \texttt{build-essential} cung cấp công cụ biên dịch phía máy chủ, QEMU chạy máy mô phỏng, còn Python dùng cho bộ kiểm thử của dự án. \texttt{gdb-multiarch} hỗ trợ gỡ lỗi khi cần.
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+sudo apt update
+sudo apt install build-essential git perl python3 \
+  gdb-multiarch qemu-system-misc \
+  gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu
+
+riscv64-linux-gnu-gcc --version
+qemu-system-riscv64 --version
+python3 --version
+\end{verbatim}
+\end{terminalbox}
+
+
+\subsection{macOS: công cụ RISC-V qua Homebrew}
+
+Trên macOS, có thể biên dịch trực tiếp trong Terminal và chạy xv6 bằng QEMU. Trước hết, cài Command Line Tools để có công cụ phát triển phía máy chủ, sau đó cài Homebrew theo hướng dẫn chính thức [10].
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+xcode-select --install
+\end{verbatim}
+\end{terminalbox}
+
+Sau khi cài Homebrew, thực hiện phần cấu hình \texttt{brew shellenv} được trình cài đặt hướng dẫn rồi mở lại Terminal. Đường dẫn này phụ thuộc vào cách cài và kiến trúc máy; không nên sao chép một đường dẫn cố định từ máy khác.
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+brew --version
+brew install riscv64-elf-gcc qemu python
+
+riscv64-elf-gcc --version
+riscv64-elf-objdump --version
+qemu-system-riscv64 --version
+python3 --version
+\end{verbatim}
+\end{terminalbox}
+
+Gói \texttt{riscv64-elf-gcc} của Homebrew kéo theo Binutils tương ứng [11]. Đây là cách cài được dùng trong hướng dẫn này, thay cho cấu hình tap RISC-V trong tài liệu cũ. Khả năng cung cấp gói dựng sẵn phụ thuộc phiên bản macOS và kiến trúc máy, nên cần kiểm tra điều kiện hỗ trợ của Homebrew trước khi cài.
+
+Bộ công cụ này có tiền tố \texttt{riscv64-elf-}, trong khi \texttt{Makefile} của mã nguồn hiện tại chưa tự nhận diện tiền tố đó. Vì vậy, khi biên dịch trên macOS phải truyền rõ \texttt{TOOLPREFIX}, thay vì đổi tên các chương trình hoặc sửa cố định đường dẫn trong \texttt{Makefile}.
+
+\subsection{Chuẩn bị mã nguồn và khởi chạy xv6}
+
+Nhóm đã sử dụng mã nguồn trong folder \path{xv6-labs-2024/} của dự án. Nếu nhận bài dưới dạng tệp nén, cần giải nén đầy đủ thư mục này cùng \path{tests/}; không thay bằng một phiên bản xv6 khác vì cấu hình và giao diện có thể khác nhau.
+
+Từ thư mục gốc dự án, chạy các lệnh sau để biên dịch:
+
+\begin{terminalbox}[title={Ubuntu trên WSL 2}]
+\small
+\begin{verbatim}
+cd xv6-labs-2024
+make
+make qemu
+\end{verbatim}
+\end{terminalbox}
+
+\begin{terminalbox}[title={macOS}]
+\small
+\begin{verbatim}
+cd xv6-labs-2024
+make TOOLPREFIX=riscv64-elf-
+make TOOLPREFIX=riscv64-elf- qemu
+\end{verbatim}
+\end{terminalbox}
+
+Môi trường sẵn sàng khi xv6 khởi động, in \texttt{init: starting sh} và hiện dấu nhắc shell. Khi đó có thể chạy \texttt{sleep 10}, \texttt{pingpong} hoặc \texttt{primes} để kiểm tra bước đầu. Để thoát QEMU, nhấn \texttt{Ctrl+A}, thả phím rồi nhấn \texttt{X}.
+
+Các chương trình người dùng được khai báo trong \texttt{UPROGS} của \texttt{Makefile}. Ví dụ, tệp dựng \path{user/_sleep} được đưa vào \texttt{fs.img} với tên \texttt{sleep}; khi chạy trong shell xv6 không thêm dấu gạch dưới. Các tệp tạo trong xv6 thuộc ảnh đĩa này, không xuất hiện như tệp thông thường trong thư mục máy chủ. Lệnh \texttt{make clean} xóa sản phẩm biên dịch và ảnh đĩa, nên cần lưu dữ liệu thử nghiệm quan trọng trước khi dọn bản dựng.
+
+\textbf{Kiểm thử tự động.} Từ thư mục gốc dự án, dùng \texttt{python3 tests/lab01/run.py} trên WSL. Trên macOS, thêm tùy chọn chọn bộ công cụ:
+
+\begin{terminalbox}
+\small
+\begin{verbatim}
+python3 tests/lab01/run.py --toolprefix=riscv64-elf-
+\end{verbatim}
+\end{terminalbox}
+
+Bộ chạy tạo bản sao tạm để biên dịch và kiểm thử, không thay đổi \texttt{fs.img} đang làm việc. Kết quả ở mục 5 là kết quả bộ kiểm thử này, không phải điểm từ \texttt{make grade}.
+
+\textbf{Lưu ý khi gặp lỗi thiết lập.} Nếu không tìm thấy compiler, kiểm tra tên chương trình, \texttt{PATH} và \texttt{TOOLPREFIX}. Nếu biên dịch dừng ở \path{user/usertests.c}, cần đọc thông báo compiler trước khi xử lý QEMU. Tài liệu bàn giao ghi nhận GCC 16 trên macOS báo \texttt{unused-but-set-variable} trong phần kiểm thử có sẵn; riêng trường hợp đó, có thể truyền giá trị \texttt{-Wno-error=unused-but-set-variable} qua tùy chọn \texttt{--extra-cflags} của bộ chạy. Tùy chọn chỉ hạ mức lỗi của cảnh báo này, không tắt toàn bộ kiểm tra biên dịch. Tệp \path{docs/fix-qemu.txt} ghi lại một cách xử lý QEMU trên Ubuntu; các lệnh gỡ gói và thêm kho trong đó không phải bước cài đặt bắt buộc và không áp dụng cho macOS.
+
+\subsection{Môi trường dùng để ghi nhận kết quả}
+
+Lượt kiểm thử được báo cáo ở mục 5 sử dụng Ubuntu 24.04 trong WSL, GCC RISC-V 13.3.0 và QEMU 8.2.2. Đây là môi trường đã tạo ra kết quả 77/77 ca kiểm thử của báo cáo. Phần macOS trình bày cách thiết lập tương ứng, có đối chiếu tài liệu bàn giao và hướng dẫn chính thức; báo cáo không xem đó là một lượt xác nhận lại toàn bộ 77 ca trên macOS.
+
 % -------------------------------------------------------------------------
-% PHẦN 3: KIẾN THỨC VÀ THIẾT KẾ CHUNG
+% PHẦN 3: KIẾN THỨC NỀN TẢNG
 % -------------------------------------------------------------------------
-\section{Kiến thức nền tảng và thiết kế hệ thống}
+\section{Kiến thức nền tảng}
 
-Trong bài thực hành, \texttt{pingpong} và \texttt{primes} dùng tiến trình con để trao đổi và xử lý dữ liệu; \texttt{cp}, \texttt{tree}, \texttt{du} và \texttt{diff} làm việc với tệp và thư mục. Dù có chức năng khác nhau, các chương trình đều cần kiểm tra kết quả thao tác, đóng tài nguyên sau khi sử dụng và thông báo rõ khi không thể tiếp tục. Phần này trình bày những kiến thức chung được áp dụng trong mã nguồn.
+Để củng cố cơ sở lý thuyết cho các giải pháp trong bài thực hành, nhóm xin trình bày sơ lược mô hình thực thi user program, các system call và user library, cùng cơ chế quản lý process, pipe và file system của xv6. Phần trình bày tập trung vào những khái niệm và API được sử dụng trong bài, qua đó làm rõ cơ sở lựa chọn giải pháp và mối liên hệ giữa các cơ chế của xv6 với thiết kế từng lệnh ở mục 4.
 
-\subsection{Các system call được sử dụng}
+\subsection{Mô hình thực thi chương trình người dùng}
 
-System call là cách chương trình yêu cầu nhân xv6 thực hiện các thao tác như mở tệp, tạo tiến trình hoặc đọc dữ liệu. Các system call chính trong bài được sử dụng như sau:
+Nắm được cách shell khởi chạy một user program giúp nhóm xác định phần việc cần xử lý trong chương trình và phần việc phải yêu cầu kernel thực hiện. Cách truyền command-line arguments cũng là cơ sở để thiết kế hàm \texttt{main()}, kiểm tra cú pháp và nhận đúng tham số cho các lệnh trong bài.
 
-\begin{itemize}
-  \item \textbf{Tạo và chờ tiến trình:} \texttt{fork()} tạo tiến trình con. Giá trị trả về giúp chương trình phân biệt phần việc của cha và con: 0 ở tiến trình con, PID của con ở tiến trình cha, và giá trị âm nếu thất bại. Trong \texttt{pingpong} và \texttt{primes}, tiến trình cha dùng \texttt{wait()} để chờ con kết thúc và thu hồi thông tin tiến trình con.
-  \item \textbf{Trao đổi dữ liệu qua pipe:} \texttt{pipe()} tạo một đường truyền một chiều, gồm đầu đọc và đầu ghi. \texttt{pingpong} dùng hai pipe cho hai chiều trao đổi; \texttt{primes} nối các tiến trình bằng pipe để chuyển những số còn lại sang bước sàng tiếp theo.
-  \item \textbf{Mở và đóng tệp:} \texttt{open()} trả về một số nguyên dùng để truy cập tệp, gọi là bộ mô tả tệp. \texttt{cp} mở nguồn để đọc, còn đích được mở với các cờ tạo tệp, ghi và xóa nội dung cũ. Các chương trình gọi \texttt{close()} khi không còn dùng tệp hoặc một đầu pipe.
-  \item \textbf{Đọc và ghi dữ liệu:} \texttt{read()} và \texttt{write()} làm việc với cả tệp lẫn pipe. Giá trị trả về cho biết số byte thực sự đã đọc hoặc ghi. Vì vậy, \texttt{cp} ghi đúng lượng dữ liệu vừa đọc được, kể cả phần cuối ngắn hơn bộ đệm; \texttt{pingpong} kiểm tra đủ một byte cho mỗi lượt trao đổi.
-  \item \textbf{Lấy thông tin tệp:} \texttt{fstat()} cung cấp loại tệp, kích thước và thông tin nhận diện của tệp đang mở. \texttt{cp} dùng thông tin này để tránh sao chép một tệp lên chính nó; \texttt{diff} kiểm tra hai đầu vào là tệp thông thường. \texttt{tree} và \texttt{du} dùng \texttt{stat()} để lấy thông tin theo đường dẫn. Trong xv6, \texttt{stat()} là hàm thư viện kết hợp \texttt{open()}, \texttt{fstat()} và \texttt{close()}, không phải một system call riêng.
-  \item \textbf{Tạm dừng và kết thúc:} \texttt{sleep()} tạm dừng tiến trình theo số tick đã nhập. \texttt{getpid()} lấy PID để in kết quả trong \texttt{pingpong}. \texttt{exit()} kết thúc chương trình và trả mã trạng thái cho tiến trình cha.
-\end{itemize}
+Khi người dùng nhập \texttt{cp src dst}, shell không tự thực hiện việc sao chép. Shell phân tích lệnh, tạo một child process bằng \texttt{fork()}, rồi gọi \texttt{exec()} trong process đó để nạp chương trình \texttt{cp}. Chương trình nhận các command-line arguments và thực hiện công việc được yêu cầu. Cách tổ chức này cho phép bổ sung một lệnh mới mà không phải đưa chức năng của lệnh vào shell hay kernel.
 
-\subsection{Quản lý tài nguyên}
+\textbf{Vai trò của user space và kernel space.}
+Shell và các chương trình trong bài đều chạy ở \textit{user space}. Chúng xử lý tham số, điều khiển luồng thực thi và chuẩn bị dữ liệu, nhưng không trực tiếp truy cập các cấu trúc nội bộ của kernel. Những thao tác cần tài nguyên hệ thống, như mở tệp, đọc dữ liệu hoặc tạo process, được yêu cầu qua \textit{system call}. Kernel xử lý yêu cầu trong \textit{kernel space} rồi trả kết quả để chương trình tiếp tục.
 
-\textbf{Đóng đúng các đầu pipe.} Sau \texttt{fork()}, cả cha và con đều có các bộ mô tả tệp đã mở trước đó. Mỗi tiến trình cần đóng những đầu pipe không thuộc phần việc của mình. Khi bên gửi đã đóng tất cả các đầu ghi và dữ liệu trong pipe đã được đọc hết, bên nhận mới nhận được dấu hiệu hết dữ liệu (EOF). Nếu còn giữ một đầu ghi không dùng, bên nhận có thể tiếp tục chờ dù không còn số nào được gửi. Trong \texttt{primes}, việc đóng đầu ghi sau khi chuyển hết các số giúp tiến trình kế tiếp kết thúc vòng đọc.
+\begin{center}
+\begin{minipage}{\textwidth}
+\centering
+\begin{tikzpicture}[
+  flowbox/.style={draw=primary!65,fill=lightbg,rounded corners=2pt,
+    line width=0.7pt,align=center,font=\small,
+    text width=3.7cm,minimum height=1.4cm,inner sep=5pt},
+  flowarrow/.style={->,>=stealth,line width=0.8pt,draw=primary}
+]
+  \node[flowbox] (command) at (0,0)
+    {\textbf{Command line}\\\texttt{cp src dst}};
+  \node[flowbox] (shell) at (5,0)
+    {\textbf{Shell xv6}\\Phân tích lệnh};
+  \node[flowbox,text width=4.2cm] (program) at (10.2,0)
+    {\textbf{User program}\\\texttt{main(argc, argv)}};
+  \node[flowbox,text width=4.2cm,fill=tableheader] (kernel) at (10.2,-2.5)
+    {\textbf{Kernel space}\\Quản lý tệp, process và pipe};
+  \draw[flowarrow] (command.east) -- (shell.west);
+  \draw[flowarrow] (shell.east) --
+    node[above,align=center,font=\scriptsize]
+    {\texttt{fork()}\\\texttt{exec()}} (program.west);
+  \draw[flowarrow] ([xshift=-8mm]program.south) --
+    node[left,font=\scriptsize] {system call}
+    ([xshift=-8mm]kernel.north);
+  \draw[flowarrow] ([xshift=8mm]kernel.north) --
+    node[right,font=\scriptsize] {Kết quả}
+    ([xshift=8mm]program.south);
+  \node[align=left,text width=7cm,font=\small,text=darkneutral,
+    anchor=west] at (-1.9,-2.5)
+    {Shell và user program đều chạy ở user space.
+     Các thao tác \texttt{fork()} và \texttt{exec()} cũng được
+     thực hiện thông qua system call.};
+\end{tikzpicture}
+\par\smallskip
+{\small\textit{Luồng khởi chạy một lệnh và tương tác giữa user program với kernel.}}
+\end{minipage}
+\end{center}
 
-\textbf{Chờ tiến trình con kết thúc.} Trên luồng chạy bình thường, các tiến trình cha trong \texttt{pingpong} và \texttt{primes} gọi \texttt{wait()} sau khi hoàn thành phần gửi dữ liệu. Việc này giúp thu hồi thông tin của tiến trình con đã kết thúc, thay vì để con ở trạng thái chờ được thu hồi. Với \texttt{primes}, mỗi bước sàng chỉ tạo tiến trình kế tiếp khi có số cần chuyển tiếp, tránh tạo thêm tiến trình ở cuối chuỗi.
 
-\textbf{Thu dọn tệp và bộ nhớ.} \texttt{cp} đóng cả tệp nguồn lẫn tệp đích sau khi sao chép hoặc khi gặp lỗi đọc, ghi. \texttt{tree} và \texttt{du} đóng thư mục ở từng lượt gọi đệ quy. \texttt{diff} giải phóng bộ nhớ chứa hai dòng và đóng hai tệp trước khi thoát. Một số nhánh lỗi trong \texttt{pingpong} và \texttt{primes} gọi \texttt{exit()} trực tiếp; nhân xv6 sẽ đóng các bộ mô tả tệp còn mở khi tiến trình kết thúc.
+\textbf{Phạm vi của user library.}
+xv6 cung cấp một user library nhỏ, với các API được khai báo trong \path{user/user.h}. Những hàm như \texttt{strcmp()} hay \texttt{atoi()} hỗ trợ xử lý dữ liệu ở user space; chúng không phải system call. Do thư viện này không có đầy đủ chức năng của thư viện C trên Linux hoặc macOS, chương trình phải sử dụng các API thực sự có trong xv6. Hai nhóm API được trình bày riêng trong các bảng ở phần tiếp theo.
 
-\textbf{Chọn bộ đệm phù hợp.} \texttt{cp} sao chép từng phần với bộ đệm 512 byte, không cần giữ toàn bộ tệp trong bộ nhớ. \texttt{tree} và \texttt{du} dùng bộ đệm đường dẫn 256 byte và kiểm tra độ dài trước khi nối tên mục con. Riêng \texttt{diff} cấp phát bộ đệm cho từng dòng, tăng kích thước khi cần và giải phóng vùng nhớ cũ sau khi thay thế. Cách này cho phép đọc dòng dài hơn kích thước ban đầu, trong giới hạn bộ nhớ có thể cấp phát.
+\subsection{Các system call liên quan}
 
-\subsection{Xử lý lỗi và thông báo kết quả}
+Để cài đặt các lệnh, nhóm cần chọn đúng system call cho từng thao tác và hiểu ý nghĩa của giá trị trả về. Kiến thức này được dùng khi yêu cầu tạm dừng trong \texttt{sleep}, tạo process và pipe trong \texttt{pingpong}, \texttt{primes}, cũng như mở, đọc và ghi tệp trong các lệnh còn lại. Các bảng dưới đây tóm tắt chức năng, tham số và kết quả cần kiểm tra của những system call liên quan.
 
-\textbf{Kiểm tra tham số trước khi thực hiện.} \texttt{sleep} yêu cầu đúng một tham số, không rỗng và chỉ gồm chữ số; \texttt{cp} yêu cầu hai đường dẫn. \texttt{tree} kiểm tra tham số đi kèm \texttt{-L} và từ chối độ sâu không dương. \texttt{tree}, \texttt{du} và \texttt{diff} cũng kiểm tra các tùy chọn được hỗ trợ. Khi cú pháp không hợp lệ, chương trình báo lỗi thay vì tiếp tục với tham số thiếu hoặc sai.
+\begin{minipage}{\textwidth}
+\small
+\renewcommand{\arraystretch}{1.2}
+\setlength{\parskip}{0pt}
+\textbf{Nhóm quản lý tiến trình và pipe.}\par\medskip
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}
+  >{\raggedright\arraybackslash}p{0.32\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+\rowcolor{tableheader}
+\textbf{System call} & \textbf{Chức năng và tham số} & \textbf{Kết quả và lưu ý} \\
+\midrule
+\texttt{fork()} &
+Tạo tiến trình con từ tiến trình hiện tại. &
+Trả 0 ở con, PID của con ở cha, $-1$ nếu thất bại. Cha và con cùng tiếp tục sau lời gọi. \\
+\texttt{wait(status)} &
+Chờ và thu hồi một tiến trình con đã kết thúc; lưu mã thoát nếu truyền con trỏ \texttt{status}. &
+Trả PID của con được thu hồi, hoặc $-1$ nếu không có con để chờ hay tiến trình chờ bị hủy. Có thể dùng \texttt{wait(0)} khi không cần mã thoát. \\
+\texttt{exit(status)} &
+Kết thúc tiến trình với mã trạng thái \texttt{status}. &
+Không quay lại nơi gọi. Kernel đóng các bộ mô tả tệp còn mở; cha nhận trạng thái qua \texttt{wait()}. \\
+\texttt{getpid()} &
+Lấy mã định danh của tiến trình đang chạy. &
+Trả PID; dùng để phân biệt cha và con trong kết quả \texttt{pingpong}. \\
+\texttt{sleep(ticks)} &
+Tạm dừng tiến trình theo số tick được yêu cầu. &
+Trả 0 khi hoàn thành, $-1$ nếu bị hủy trong lúc chờ. Tick không phải đơn vị giây. \\
+\texttt{pipe(p)} &
+Tạo kênh truyền một chiều; ghi hai descriptor vào mảng \texttt{p}. &
+Trả 0 khi thành công, $-1$ khi lỗi. \texttt{p[0]} là đầu đọc, \texttt{p[1]} là đầu ghi. \\
+\bottomrule
+\end{tabularx}
+\end{minipage}
 
-\textbf{Kiểm tra kết quả thao tác.} Những thao tác như \texttt{open()}, \texttt{pipe()}, \texttt{fork()} và \texttt{fstat()} có thể thất bại, nên chương trình cần kiểm tra trước khi dùng kết quả. Với thao tác đọc, giá trị dương là số byte nhận được, 0 là hết dữ liệu và giá trị âm là lỗi. \texttt{cp} phân biệt hết tệp với lỗi đọc, đồng thời coi việc ghi thiếu byte là thất bại. \texttt{diff} kiểm tra lỗi đọc, cấp phát bộ nhớ và ghi nội dung dòng; hàm in dòng tiếp tục ghi phần còn lại nếu một lần ghi chưa hết dữ liệu.
+\medskip
+\begin{minipage}{\textwidth}
+\small
+\renewcommand{\arraystretch}{1.2}
+\textbf{Nhóm truy cập tệp và nạp chương trình.}\par\medskip
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}
+  >{\raggedright\arraybackslash}p{0.32\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+\rowcolor{tableheader}
+\textbf{System call} & \textbf{Chức năng và tham số} & \textbf{Kết quả và lưu ý} \\
+\midrule
+\texttt{open(path, mode)} &
+Mở đường dẫn theo chế độ đọc, ghi hoặc tạo tệp. &
+Trả descriptor không âm, $-1$ nếu thất bại. Các cờ được định nghĩa trong \path{kernel/fcntl.h}. \\
+\texttt{close(fd)} &
+Đóng descriptor không còn cần sử dụng. &
+Trả 0 khi thành công, $-1$ nếu descriptor không hợp lệ. Đóng một đầu pipe chỉ bỏ tham chiếu của tiến trình gọi. \\
+\texttt{read(fd, buf, n)} &
+Đọc tối đa \texttt{n} byte từ tệp, thiết bị hoặc pipe vào vùng đệm. &
+Trả số byte đã đọc; 0 là hết dữ liệu (EOF), $-1$ là lỗi. Không tự thêm ký tự kết thúc chuỗi. \\
+\texttt{write(fd, buf, n)} &
+Ghi \texttt{n} byte từ vùng đệm ra descriptor. &
+Trả số byte đã ghi hoặc $-1$ khi lỗi. Phải kiểm tra số byte thực tế, không mặc định luôn ghi đủ. \\
+\texttt{fstat(fd, st)} &
+Lấy thông tin tệp đang mở vào \texttt{struct stat}. &
+Trả 0 khi thành công, $-1$ khi lỗi. Thông tin gồm loại, kích thước, thiết bị và số inode. \\
+\texttt{exec(path, argv)} &
+Thay chương trình đang chạy bằng chương trình tại \texttt{path}, với danh sách tham số \texttt{argv}. &
+Giữ PID và các descriptor đang mở. Không quay lại khi thành công; trả $-1$ khi thất bại. \\
+\bottomrule
+\end{tabularx}
+\end{minipage}
 
-\textbf{Bảo vệ dữ liệu và chọn phạm vi dừng.} \texttt{cp} kiểm tra tệp đích trước khi mở với cờ xóa nội dung cũ, đặc biệt là trường hợp nguồn và đích cùng trỏ đến một tệp. Với \texttt{tree}, nếu không lấy được thông tin một mục con thì chương trình báo lỗi rồi duyệt tiếp các mục khác. \texttt{du} trả về 0 cho nhánh không truy cập được, nên tổng in ra có thể chưa bao gồm toàn bộ dữ liệu khi có lỗi. Đây là cách xử lý hiện có trong mã nguồn, không phải cam kết rằng việc duyệt luôn đầy đủ.
+\subsection{Các hàm thư viện người dùng}
 
-Thông báo lỗi được ghi ra luồng lỗi chuẩn bằng \texttt{fprintf(2, ...)}, thường kèm tên lệnh và đường dẫn liên quan để người dùng biết thao tác nào thất bại. Các lệnh thường dùng mã thoát 0 khi hoàn thành và 1 cho lỗi được phát hiện ở mức chương trình chính. Riêng \texttt{diff} dùng 0 khi hai tệp giống nhau, 1 khi có khác biệt và 2 khi có lỗi; việc hai tệp khác nhau là kết quả so sánh, không phải lỗi thực thi.
+Các bước kiểm tra tham số, so sánh dữ liệu và cấp phát buffer được thực hiện bằng user library. Hiểu các hàm có sẵn và giới hạn của chúng giúp nhóm chọn cách xử lý phù hợp với xv6, từ chuyển đổi số trong \texttt{sleep}, nhận diện tùy chọn trong \texttt{tree}, \texttt{du} đến quản lý bộ nhớ cho dòng dài trong \texttt{diff}.
 
-Việc kiểm tra lỗi chưa đồng đều ở mọi vòng đọc: \texttt{primes}, \texttt{tree} và \texttt{du} dừng vòng lặp khi không đọc đủ một phần tử nhưng chưa tách riêng trường hợp hết dữ liệu và lỗi đọc. Vì vậy, phần báo cáo chỉ mô tả các kiểm tra đã có, không xem đây là cơ chế xử lý lỗi đầy đủ cho mọi tình huống.
+Không phải mọi hàm trong \path{user/user.h} đều là system call. Chẳng hạn, \texttt{stat()} là hàm thư viện thực hiện lần lượt \texttt{open()}, \texttt{fstat()} và \texttt{close()}. Phân biệt hai nhóm giúp xác định đúng vai trò của giao diện và tránh giả định rằng xv6 cung cấp đầy đủ thư viện C chuẩn.
+
+\begin{minipage}{\textwidth}
+\small
+\renewcommand{\arraystretch}{1.2}
+\setlength{\parskip}{0pt}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.25\textwidth}
+  >{\raggedright\arraybackslash}p{0.34\textwidth}
+  >{\raggedright\arraybackslash}X@{}}
+\toprule
+\rowcolor{tableheader}
+\textbf{Hàm thư viện} & \textbf{Công dụng} & \textbf{Điểm cần lưu ý} \\
+\midrule
+\texttt{stat(path, st)} &
+Lấy thông tin tệp theo đường dẫn. &
+Trả 0 khi thành công, $-1$ khi lỗi; descriptor mở bên trong được đóng trước khi trả về. \\
+\texttt{atoi(s)} &
+Chuyển chuỗi chữ số thành số nguyên. &
+Không có cơ chế báo lỗi chuyển đổi riêng; chương trình phải kiểm tra định dạng đầu vào. \\
+\texttt{strcmp(a, b)} &
+So sánh hai chuỗi kết thúc bằng ký tự NUL. &
+Trả 0 khi giống nhau; dùng để nhận diện tùy chọn và tên mục đặc biệt. \\
+\texttt{strlen(s)} &
+Tính số ký tự trước NUL. &
+Không dùng để suy ra độ dài của dữ liệu nhị phân hoặc vùng đệm chưa kết thúc chuỗi. \\
+\texttt{memcmp(a, b, n)} &
+So sánh đúng \texttt{n} byte của hai vùng nhớ. &
+Trả 0 khi bằng nhau; phù hợp để so sánh dòng theo độ dài, kể cả khi có byte NUL. \\
+\texttt{memmove(dst, src, n)} &
+Sao chép \texttt{n} byte giữa hai vùng nhớ. &
+Cho phép hai vùng chồng lấn; cần bảo đảm vùng đích đủ lớn. \\
+\texttt{malloc(n)}, \texttt{free(p)} &
+Cấp phát và giải phóng bộ nhớ động. &
+Kiểm tra con trỏ trả về từ \texttt{malloc()}; giải phóng vùng nhớ sau khi dùng hoặc khi thay bộ đệm. \\
+\texttt{printf(fmt, ...)}, \texttt{fprintf(fd, fmt, ...)} &
+In thông tin theo định dạng. &
+\texttt{printf()} ghi ra descriptor 1; \texttt{fprintf()} ghi ra descriptor được chỉ định. Hai hàm trả về \texttt{void} trong xv6. \\
+\bottomrule
+\end{tabularx}
+\end{minipage}
+
+\subsection{Process và giao tiếp qua pipe}
+
+Việc cài đặt \texttt{pingpong} và \texttt{primes} đòi hỏi xác định rõ process nào gửi, process nào nhận và khi nào mỗi bên được kết thúc. Hiểu cơ chế hoạt động của process và pipe là cơ sở để bố trí các kênh truyền, đóng đúng đầu pipe và chờ các process con, tránh tình trạng chương trình treo hoặc kết thúc khi công việc vẫn chưa hoàn tất.
+
+Trong các lệnh \texttt{pingpong} và \texttt{primes}, công việc được chia cho nhiều process. Một process tạo process con bằng \texttt{fork()}; cả hai tiếp tục thực thi từ sau lời gọi này, với bộ nhớ riêng và các file descriptor được kế thừa. Cha hay con chạy trước phụ thuộc vào scheduler. Do đó, thứ tự xử lý phải được xác định bằng việc trao đổi dữ liệu hoặc chờ, thay vì dựa vào thứ tự chạy tình cờ.
+
+Pipe là kênh truyền dữ liệu một chiều giữa các process, gồm một đầu đọc và một đầu ghi. Dữ liệu bên gửi ghi vào được lưu trong buffer của kernel để bên nhận đọc ra. Nếu chưa có dữ liệu nhưng đầu ghi vẫn mở, bên nhận sẽ chờ; nếu buffer đầy, bên gửi có thể phải chờ bên nhận đọc bớt. Với trao đổi hai chiều như \texttt{pingpong}, mỗi chiều dùng một pipe riêng.
+
+Việc đóng đầu pipe quyết định khi nào quá trình nhận dữ liệu kết thúc. Sau \texttt{fork()}, cha và con đều giữ các đầu pipe đã mở, nên mỗi bên phải đóng những đầu không dùng. \texttt{read()} chỉ trả về EOF khi buffer đã được đọc hết và không còn process nào giữ đầu ghi. Một đầu ghi bị bỏ quên có thể khiến bên nhận tiếp tục chờ dù bên gửi đã hoàn thành. Đây cũng là điều kiện kết thúc mỗi bước sàng trong \texttt{primes}.
+
+Sau khi gửi hết dữ liệu, process cha vẫn cần gọi \texttt{wait()} để chờ con xử lý xong và thu hồi thông tin của con khi kết thúc. Còn \texttt{sleep()} tạm dừng process theo số tick được yêu cầu, nhường CPU cho các công việc khác. Hết khoảng chờ, process được đưa về trạng thái sẵn sàng; scheduler quyết định thời điểm nó tiếp tục chạy.
+
+\subsection{Truy cập file system và duyệt thư mục}
+
+Các lệnh \texttt{cp}, \texttt{tree}, \texttt{du} và \texttt{diff} cần truy cập đúng tệp và xác định được loại dữ liệu đang xử lý. Kiến thức về file descriptor, inode và cấu trúc thư mục giúp nhóm chọn chế độ mở tệp, kiểm tra nguồn và đích của \texttt{cp}, đồng thời xây dựng cách duyệt đệ quy và cộng dung lượng cho \texttt{tree}, \texttt{du}.
+
+Chương trình truy cập một tệp bằng cách mở đường dẫn rồi dùng file descriptor do kernel trả về cho các lần đọc, ghi tiếp theo. File descriptor là một số nguyên có ý nghĩa trong process đang sử dụng nó. Giao diện này cũng áp dụng cho pipe và thiết bị, nên chương trình có thể dùng cùng \texttt{read()} và \texttt{write()} với những nguồn dữ liệu khác nhau. Theo quy ước của shell, descriptor 0, 1 và 2 tương ứng với standard input, standard output và standard error.
+
+Để biết một đường dẫn là tệp thường hay thư mục, chương trình lấy metadata bằng \texttt{stat()} hoặc \texttt{fstat()}. Kết quả được lưu trong \texttt{struct stat}, trong đó \texttt{type} cho biết loại tệp và \texttt{size} cho biết độ dài nội dung theo byte. Tên tệp và bản thân tệp là hai khái niệm khác nhau: một tên trong thư mục trỏ đến inode lưu thông tin về tệp, và nhiều tên có thể cùng trỏ đến một inode. Vì vậy, \texttt{cp} kiểm tra cặp \texttt{dev}, \texttt{ino} của nguồn và đích trước khi ghi đè, thay vì chỉ so sánh hai đường dẫn.
+
+Chế độ đọc, ghi và cách xử lý tệp đã tồn tại được chọn qua các cờ của \texttt{open()}. Những cờ dùng trong bài có ý nghĩa như sau:
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\rowcolor{tableheader}
+\textbf{Cờ} & \textbf{Ý nghĩa} \\
+\midrule
+\texttt{O\_RDONLY} & Mở chỉ đọc. \\
+\texttt{O\_WRONLY} & Mở chỉ ghi. \\
+\texttt{O\_RDWR} & Mở cho cả đọc và ghi. \\
+\texttt{O\_CREATE} & Tạo tệp nếu chưa tồn tại; không tự xóa nội dung của tệp đã có. \\
+\texttt{O\_TRUNC} & Đưa độ dài tệp thường về 0 khi mở; cần kiểm tra nguồn và đích trước khi dùng. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Khi duyệt thư mục, chương trình đọc các directory entry chứa tên và số inode của từng mục con, bỏ qua entry chưa sử dụng rồi ghép đường dẫn để tiếp tục truy cập. Hai mục \texttt{.} và \texttt{..} phải được loại khỏi quá trình duyệt xuống vì chúng trỏ đến thư mục hiện tại và thư mục cha. Tên trong entry có độ dài cố định và có thể thiếu ký tự kết thúc NUL, nên cần chuyển sang chuỗi C hợp lệ trước khi xử lý.
+
+Cấu trúc thư mục phù hợp với cách duyệt đệ quy: gặp tệp thường thì xử lý trực tiếp, gặp thư mục thì áp dụng lại cách duyệt cho các mục bên trong. \texttt{tree} theo dõi độ sâu để hiển thị phân cấp và giới hạn việc đi xuống. \texttt{du} cộng kết quả từ các thư mục con để tính tổng. Tổng được dùng trong bài là độ dài nội dung các tệp theo byte, không tính dung lượng của bản thân thư mục hay số khối đĩa thực tế đã cấp phát.
+
+\subsection{Xử lý dữ liệu và quản lý tài nguyên}
+
+Đọc đúng dữ liệu và thu dọn tài nguyên là yêu cầu chung khi cài đặt các chương trình trong bài. Nắm được cách dùng buffer, nhận biết EOF và kiểm tra lỗi giúp nhóm xử lý tệp lớn trong \texttt{cp}, dòng dài trong \texttt{diff}, cũng như xác định những tệp, vùng nhớ và process cần được thu hồi khi hoàn thành hoặc gặp lỗi.
+
+Các tệp có thể lớn hơn nhiều so với vùng nhớ dành cho việc xử lý. Vì vậy, \texttt{cp} đọc và ghi từng phần qua một buffer, không nạp toàn bộ tệp vào bộ nhớ. Mỗi lượt đọc trả về số byte thực tế nhận được; lượng dữ liệu đem ghi phải dựa trên con số này, nhất là ở cuối tệp khi buffer thường không còn đầy. Giá trị 0 cho biết đã hết dữ liệu, còn $-1$ báo lỗi đọc. Khi ghi, chương trình cũng cần kiểm tra số byte đã ghi thay vì mặc định thao tác luôn hoàn tất.
+
+Với \texttt{diff}, dữ liệu được tổ chức thành dòng để so sánh. Một dòng có thể dài hơn buffer ban đầu, và dòng cuối vẫn hợp lệ dù không có ký tự xuống dòng. Dòng rỗng cũng phải được phân biệt với EOF: dòng rỗng có ký tự xuống dòng, trong khi EOF cho biết không còn dữ liệu để đọc. Những trường hợp này cần được xử lý ngay trong bước đọc dòng để kết quả so sánh không bị sai lệch.
+
+Kích thước buffer phải đủ cho cả dữ liệu và phần kết thúc chuỗi nếu dùng chuỗi C. Với đường dẫn, độ dài cần tính cả thư mục hiện tại, dấu phân cách, tên mục con và NUL. Vùng nhớ động phải được kiểm tra sau khi cấp phát và giải phóng khi không còn dùng. Tương tự, tệp và đầu pipe được đóng sau khi xử lý; process cha chờ con nếu cần bảo đảm công việc của con đã hoàn tất.
+
+Khi gặp lỗi, chương trình ghi thông báo vào standard error, kèm thao tác hoặc đường dẫn liên quan. Exit status được dùng để trả kết quả cho process cha. Riêng \texttt{diff}, mã 0 biểu thị hai tệp giống nhau, mã 1 biểu thị có khác biệt và mã 2 biểu thị lỗi thực thi. Việc hai tệp khác nhau vì thế không được xem là lỗi của chương trình.
+
+Trong bản hiện thực này, các vòng đọc của \texttt{primes}, \texttt{tree} và \texttt{du} chưa phân biệt riêng lỗi đọc với trường hợp không đọc đủ một phần tử. \texttt{du} cũng trả 0 khi không truy cập được một nhánh, nên tổng có thể thiếu dữ liệu nếu xảy ra lỗi. Các kết quả kiểm thử ở mục 5 cần được hiểu trong phạm vi đó.
 
 % -------------------------------------------------------------------------
 % PHẦN 4: CHI TIẾT CÁC CHƯƠNG TRÌNH THỰC HIỆN
@@ -367,6 +642,13 @@ Việc kiểm tra lỗi chưa đồng đều ở mọi vòng đọc: \texttt{pri
   \item \textbf{Chức năng:} Tạm dừng tiến trình hiện tại trong số chu kỳ đồng hồ do \texttt{ticks} chỉ định.
   \item \textbf{Tham số:} Chấp nhận đúng một tham số bắt buộc theo cú pháp \texttt{sleep ticks}; \texttt{ticks} phải là một giá trị số hợp lệ.
   \item \textbf{Xử lý lỗi:} Phát hiện trường hợp thiếu, thừa hoặc sai định dạng tham số và thông báo lỗi phù hợp.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Tick và thời gian hệ thống:} Tick là đơn vị đếm theo nhịp ngắt của bộ định thời trong xv6. Số tick cho biết khoảng cần chờ, nhưng không thể hiểu trực tiếp là số giây.
+  \item \textbf{Trạng thái chờ của tiến trình:} Một tiến trình có thể tạm ngừng thực thi cho đến khi điều kiện chờ được đáp ứng. System call \texttt{sleep()} sử dụng cơ chế này, để tiến trình nhường CPU thay vì liên tục kiểm tra đồng hồ.
+  \item \textbf{Chuyển đổi tham số số:} Tham số dòng lệnh ban đầu là chuỗi ký tự, kể cả khi người dùng nhập một số. Kiểm tra chuỗi trước khi chuyển đổi giúp phân biệt giá trị số với dữ liệu sai định dạng.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -391,8 +673,6 @@ Mã giả dưới đây mô tả các bước kiểm tra tham số và tạm d�
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Nhận xét \& khó khăn:} \placeholder{Ghi chú các trường hợp đặc biệt (ví dụ: ticks âm hoặc bằng 0).}
-
 % --- 4.2. pingpong ---
 \subsection{\texttt{pingpong}}
 
@@ -401,6 +681,14 @@ Mã giả dưới đây mô tả các bước kiểm tra tham số và tạm d�
   \item \textbf{Chức năng:} Minh họa giao tiếp hai chiều giữa tiến trình cha và tiến trình con bằng cách gửi ``ping'' và nhận phản hồi ``pong''.
   \item \textbf{Tham số:} Không nhận tham số dòng lệnh; lệnh được thực thi trực tiếp bằng \texttt{pingpong}.
   \item \textbf{Kết quả:} In thông báo giao tiếp kèm PID của các tiến trình và kết thúc bình thường sau khi trao đổi hoàn tất.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Tiến trình cha và con:} Sau \texttt{fork()}, cha và con tiếp tục chạy độc lập từ cùng vị trí nhưng nhận giá trị trả về khác nhau. Nhờ đó, chương trình phân chia được vai trò gửi và phản hồi cho hai tiến trình.
+  \item \textbf{Pipe một chiều:} Một pipe chỉ truyền dữ liệu theo một hướng, từ đầu ghi đến đầu đọc. Lượt trao đổi cần cả gửi lẫn phản hồi nên sử dụng hai pipe, mỗi pipe đảm nhiệm một chiều.
+  \item \textbf{Đồng bộ tiến trình:} Thao tác đọc pipe có thể chờ khi chưa có dữ liệu, còn \texttt{wait()} cho phép cha chờ con kết thúc. Hai cơ chế này xác lập quan hệ trước--sau giữa các công việc mà không phụ thuộc tiến trình nào được cấp CPU trước.
+  \item \textbf{Các đầu pipe được kế thừa:} Tiến trình con thừa hưởng các đầu pipe đã mở trước khi được tạo. Mỗi bên cần đóng những đầu không dùng và chỉ giữ đầu đọc, đầu ghi phù hợp với vai trò của mình.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -436,8 +724,6 @@ Trình tự trao đổi giữa tiến trình cha và con được trình bày tr
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
-
 % --- 4.3. primes ---
 \subsection{\texttt{primes}}
 
@@ -446,6 +732,13 @@ Trình tự trao đổi giữa tiến trình cha và con được trình bày tr
   \item \textbf{Chức năng:} Sinh và in các số nguyên tố trong phạm vi từ 2 đến 280.
   \item \textbf{Tham số:} Không nhận tham số dòng lệnh; phạm vi xử lý được cố định theo yêu cầu của bài thực hành.
   \item \textbf{Mục tiêu xử lý:} Thể hiện mô hình sàng Eratosthenes đồng thời và bảo đảm mỗi số nguyên tố được xuất đúng một lần.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Sàng số nguyên tố:} Mọi hợp số đều có ít nhất một ước nguyên tố nhỏ hơn nó. Loại dần các bội của những số nguyên tố đã tìm được sẽ giữ lại các ứng viên cho bước sàng tiếp theo.
+  \item \textbf{Pipeline tiến trình:} Pipeline chia công việc thành các bước nối tiếp, trong đó đầu ra của bước trước là đầu vào của bước sau. Với bài này, mỗi tiến trình đảm nhiệm một bộ lọc và truyền số qua pipe, không cần dùng chung một mảng dữ liệu.
+  \item \textbf{EOF và kết thúc chuỗi xử lý:} Bên đọc nhận EOF khi dữ liệu trong pipe đã hết và mọi đầu ghi đã đóng; vì vậy, mỗi bước chỉ giữ những đầu pipe cần dùng. Việc chờ tiến trình con hoàn tất giúp thu hồi thông tin tiến trình đã kết thúc và bảo đảm phần việc phía sau hoàn thành trước khi bước hiện tại thoát.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -490,11 +783,6 @@ Mã giả dưới đây mô tả một bước sàng trong hàm \texttt{primes(l
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Quản lý Process \& Pipe.}
-Mỗi bước lọc chỉ giữ những kênh liên lạc cần thiết. Khi đã chuyển hết các số, bước đó báo cho bước tiếp theo biết để việc xử lý có thể kết thúc. Các tiến trình chờ phần việc phía sau hoàn tất trước khi thoát.
-
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
-
 % --- 4.4. cp ---
 \subsection{\texttt{cp}}
 
@@ -503,6 +791,13 @@ Mỗi bước lọc chỉ giữ những kênh liên lạc cần thiết. Khi đ�
   \item \textbf{Chức năng:} Sao chép toàn bộ nội dung từ tệp nguồn \texttt{src} sang tệp đích \texttt{dst}.
   \item \textbf{Tham số:} Nhận đúng hai tham số đường dẫn theo cú pháp \texttt{cp src dst}.
   \item \textbf{Xử lý lỗi:} Kiểm tra nguồn không hợp lệ, đích không thể tạo hoặc mở, trường hợp nguồn và đích cùng trỏ tới một tệp, đồng thời báo lỗi khi cú pháp không đúng.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Bộ mô tả tệp:} Khi mở một tệp, tiến trình nhận một số nguyên dùng để truy cập tệp đó trong các thao tác đọc, ghi và đóng. Hai tệp nguồn và đích được mở với chế độ khác nhau, phù hợp với chiều sao chép.
+  \item \textbf{Đọc--ghi theo khối:} Bộ đệm giữ một phần dữ liệu trong lúc chuyển từ nguồn sang đích, nên không cần nạp toàn bộ tệp vào bộ nhớ. Số byte thực sự đọc được quyết định lượng cần ghi, đặc biệt ở phần cuối tệp.
+  \item \textbf{Nhận diện tệp và liên kết cứng:} Hai đường dẫn khác nhau có thể trỏ đến cùng một tệp thông qua liên kết cứng. Cặp thông tin thiết bị và số inode, tức mã nhận diện tệp trên thiết bị, cho phép phát hiện trường hợp này trước khi ghi đè nội dung.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -542,8 +837,6 @@ Quy trình kiểm tra tệp và sao chép dữ liệu trong hàm \texttt{main()}
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
-
 % --- 4.5. tree ---
 \subsection{\texttt{tree}}
 
@@ -552,6 +845,13 @@ Quy trình kiểm tra tệp và sao chép dữ liệu trong hàm \texttt{main()}
   \item \textbf{Chức năng:} Hiển thị thư mục và tệp tin theo dạng cây phân cấp.
   \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là thư mục hiện hành \texttt{.}; hỗ trợ \texttt{-L depth} để giới hạn độ sâu và \texttt{-d} để chỉ liệt kê thư mục.
   \item \textbf{Xử lý lỗi:} Phát hiện và thông báo rõ ràng các đường dẫn, tham số hoặc tùy chọn không hợp lệ.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Cây thư mục:} Một thư mục chứa các mục trỏ đến tệp hoặc thư mục con, tạo nên cấu trúc phân cấp. Biết loại của từng mục giúp xác định nhánh nào có thể tiếp tục duyệt; trong xv6, thông tin theo đường dẫn được lấy qua hàm thư viện \texttt{stat()}.
+  \item \textbf{Đệ quy và duyệt chiều sâu:} Mỗi thư mục con có thể được xử lý theo cùng cách với thư mục chứa nó. Đệ quy cho phép đi sâu vào một nhánh rồi quay lại các mục còn lại, đồng thời dùng độ sâu hiện tại để xác định mức thụt lề.
+  \item \textbf{Điều kiện dừng khi duyệt:} Hai mục \texttt{.} và \texttt{..} trỏ đến thư mục hiện tại và thư mục cha, nên không được xem là nhánh mới. Giới hạn độ sâu là một điều kiện dừng khác, cho phép chỉ duyệt đến số tầng người dùng yêu cầu.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -595,8 +895,6 @@ Mã giả dưới đây thể hiện cách duyệt và hiển thị một nhánh
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
-
 % --- 4.6. du ---
 \subsection{\texttt{du}}
 
@@ -605,6 +903,13 @@ Mã giả dưới đây thể hiện cách duyệt và hiển thị một nhánh
   \item \textbf{Chức năng:} Tính và hiển thị dung lượng sử dụng của tệp hoặc thư mục theo đơn vị byte.
   \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là \texttt{.}; hỗ trợ \texttt{-s} để chỉ in tổng dung lượng và \texttt{-a} để hiển thị thêm dung lượng của từng tệp.
   \item \textbf{Đầu ra:} Hiển thị dung lượng theo byte cùng đường dẫn tương ứng và tuân theo chế độ hiển thị đã chọn.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{Thông tin kích thước tệp:} Hệ thống tệp lưu kích thước của từng tệp trong thông tin quản lý của nó. Lấy giá trị này đủ để thống kê số byte, không cần đọc lại toàn bộ nội dung tệp.
+  \item \textbf{Duyệt hậu thứ tự:} Khi kết quả của thư mục cha phụ thuộc các mục con, các mục con phải được tính trước. Cách duyệt này cho phép mỗi nhánh trả về một tổng để cộng vào thư mục chứa nó.
+  \item \textbf{Kích thước dữ liệu và dung lượng đĩa:} Số byte của tệp không đồng nhất với số khối đĩa được cấp phát để lưu tệp. Phép tính trong bài cộng kích thước các tệp theo byte, không cộng kích thước bản thân thư mục hay quy đổi sang dung lượng khối đĩa.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -650,8 +955,6 @@ Cách tính dung lượng và cộng dồn kết quả từ các mục con đư�
 \end{algorithmcode}
 \end{algorithmblock}
 
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
-
 % --- 4.7. diff ---
 \subsection{\texttt{diff}}
 
@@ -660,6 +963,13 @@ Cách tính dung lượng và cộng dồn kết quả từ các mục con đư�
   \item \textbf{Chức năng:} So sánh nội dung của hai tệp theo từng dòng và xác định các vị trí khác biệt.
   \item \textbf{Tham số:} Nhận hai tệp bắt buộc \texttt{file1}, \texttt{file2} và tùy chọn \texttt{-q} theo cú pháp \texttt{diff file1 file2 [-q]}.
   \item \textbf{Đầu ra:} Ở chế độ thông thường, chỉ ra các dòng khác biệt của từng tệp; với \texttt{-q}, chỉ thông báo hai tệp có khác nhau hay không.
+\end{itemize}
+
+\textbf{Kiến thức sử dụng.}
+\begin{itemize}
+  \item \textbf{So sánh theo vị trí:} Hai dòng được đối chiếu khi có cùng số thứ tự trong hai tệp. Đây là phép so sánh từng cặp, không tìm cách ghép lại các dòng tương ứng khi có chèn hoặc xóa nội dung.
+  \item \textbf{Dòng trống, EOF và dấu xuống dòng:} Dòng trống vẫn là một dòng, còn EOF cho biết không còn dữ liệu để đọc. Dấu xuống dòng cũng là một phần cần kiểm tra, vì dòng cuối có thể kết thúc ngay tại EOF mà không có dấu này.
+  \item \textbf{Bộ đệm động:} Độ dài dòng không biết trước, nên vùng nhớ chứa dòng cần được mở rộng khi chưa đủ chỗ. Theo dõi số byte thực tế giúp giữ đủ nội dung, kể cả khi có byte 0 nằm giữa dòng; vùng nhớ được giải phóng sau khi sử dụng.
 \end{itemize}
 
 \textbf{Ý tưởng triển khai.}
@@ -704,8 +1014,6 @@ Mã giả dưới đây mô tả quy trình so sánh trong hàm \texttt{main()},
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
-
-\textbf{Nhận xét \& khó khăn:} \placeholder{Điền nếu có.}
 
 % -------------------------------------------------------------------------
 % PHẦN 5: KẾT QUẢ KIỂM THỬ TỔNG HỢP
@@ -831,6 +1139,13 @@ Qua bài thực hành Lab 01, nhóm đã hoàn thiện toàn diện các kỹ n�
   \url{https://www.gnu.org/software/coreutils/manual/coreutils.html}.
   \item GNU Project, \textit{Comparing and Merging Files}, mục \textit{Invoking diff}. Tham khảo cách diễn giải kết quả so sánh và mã thoát của \texttt{diff}.\\
   \url{https://www.gnu.org/software/diffutils/manual/html_node/Invoking-diff.html}.
+  \item Microsoft Learn, \textit{How to install Linux on Windows with WSL}. Tham khảo yêu cầu hệ thống, cài bản phân phối Ubuntu và kiểm tra phiên bản WSL.\\
+  \url{https://learn.microsoft.com/en-us/windows/wsl/install}.
+  \item Homebrew, \textit{Installation}. Tham khảo cách cài đặt và yêu cầu môi trường macOS.\\
+  \url{https://docs.brew.sh/Installation}.
+  \item Homebrew Formulae, \textit{riscv64-elf-gcc} và \textit{qemu}. Tham khảo tên gói, phụ thuộc Binutils và công cụ biên dịch RISC-V trên macOS.\\
+  \url{https://formulae.brew.sh/formula/riscv64-elf-gcc};\\
+  \url{https://formulae.brew.sh/formula/qemu}.
 \end{enumerate}
 \endgroup
 

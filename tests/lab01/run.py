@@ -25,13 +25,13 @@ def main():
         # Clean only this disposable copy, including copied host executables.
         subprocess.run(["make", "TOOLPREFIX=" + args.toolprefix, "clean"], cwd=root, check=True,
                        stdout=subprocess.DEVNULL)
-        programs = ["cptest", "difftest", "linetest"]
+        programs = ["cptest", "difftest", "linetest", "coretest"]
         for name in programs:
             shutil.copy2(repo / "tests/lab01" / (name + ".c"), root / "user" / (name + ".c"))
         (root / "tests.mk").write_text(
             "include Makefile\nCFLAGS += " + args.extra_cflags + "\n"
-            "UPROGS += user/_cptest user/_difftest user/_linetest\n"
-            "fs.img: user/_cptest user/_difftest user/_linetest\n")
+            "UPROGS += " + " ".join("user/_" + name for name in programs) + "\n"
+            "fs.img: " + " ".join("user/_" + name for name in programs) + "\n")
         subprocess.run(["make", "-f", "tests.mk", "TOOLPREFIX=" + args.toolprefix,
                         "kernel/kernel", "fs.img"], cwd=root, check=True)
         cmd = [args.qemu, "-machine", "virt", "-bios", "none", "-kernel", "kernel/kernel",
@@ -63,7 +63,8 @@ def main():
                         proc.stdin.write((programs[sent] + "\n").encode())
                         proc.stdin.flush()
                         sent += 1
-            markers = [b"ALL CP TESTS PASSED", b"ALL DIFF TESTS PASSED", b"ALL LINE TESTS PASSED"]
+            markers = [b"ALL " + name.encode() + b" TESTS PASSED"
+                       for name in ["CP", "DIFF", "LINE", "SLEEP", "PINGPONG", "PRIMES", "TREE", "DU", "CORE"]]
             if not complete or b"FAIL:" in output or not all(m in output for m in markers):
                 raise RuntimeError("Tests failed or timed out; inspect QEMU log")
         finally:
@@ -81,7 +82,7 @@ def main():
             print(output.decode(errors="replace"))
             proc.stdin.close()
             proc.stdout.close()
-        print("PASS: cp, diff and line reader; log:", args.log)
+        print("PASS: all seven lab commands and line reader; log:", args.log)
 
 
 if __name__ == "__main__":
