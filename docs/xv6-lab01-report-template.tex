@@ -21,6 +21,8 @@
 
 % --- Các gói hỗ trợ toán & đồ họa ---
 \usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\graphicspath{{docs/}{./}}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{tabularx}
@@ -177,21 +179,22 @@
 \vspace{0.12cm}
 {\normalsize\bfseries KHOA CÔNG NGHỆ THÔNG TIN\par}
 {\small BỘ MÔN HỆ ĐIỀU HÀNH\par}
-\vspace{0.42cm}
+\vspace{0.35cm}
 {\color{primary}\rule{0.72\linewidth}{1.2pt}\par}
 
-\vspace{1.7cm}
+\vspace{0.55cm}
+\includegraphics[width=2.8cm]{logo-hcmus.png}\par
+\vspace{0.55cm}
 
 {\Large\bfseries\color{primary} BÁO CÁO THỰC HÀNH\par}
-\vspace{0.18cm}
+\vspace{0.15cm}
 {\normalsize\bfseries\color{darkneutral} MÔN HỆ ĐIỀU HÀNH\par}
-\vspace{0.85cm}
+\vspace{0.65cm}
 {\Huge\bfseries\color{secondary} Lab 01\par}
 \vspace{0.12cm}
 {\LARGE\bfseries\color{primary} Xv6 User Programs:\\[0.10cm]
 File System\par}
-\vspace{0.25cm}
-\vspace{1.55cm}
+\vspace{0.9cm}
 
 \begin{tcolorbox}[
   enhanced,
@@ -213,6 +216,8 @@ File System\par}
 \end{tcolorbox}
 
 \vfill
+
+{\small\color{darkneutral} TP. HỒ CHÍ MINH, THÁNG 10/2026\par}
 
 \end{tcolorbox}
 \end{titlepage}
@@ -747,386 +752,566 @@ Môi trường thực thi của xv6 áp đặt các ràng buộc tài nguyên r�
 % -------------------------------------------------------------------------
 \section{Các chương trình đã thực hiện}
 
+Trong phần này, nhóm trình bày chi tiết thiết kế kỹ thuật, giải thuật và giải pháp hiện thực của toàn bộ 07 chương trình tiện ích người dùng được phát triển trong khuôn khổ bài thực hành, tương ứng với các tệp mã nguồn đặt tại thư mục \path{xv6-labs-2024/user/}. Mỗi chương trình được phân tích từ đặc tả yêu cầu, cách tổ chức mã nguồn, luồng xử lý chính đến các kỹ thuật xử lý edge case và bảo đảm an toàn tài nguyên hệ thống.
+
 % --- 4.1. sleep ---
 \subsection{\texttt{sleep}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Tạm dừng tiến trình hiện tại trong số chu kỳ đồng hồ do \texttt{ticks} chỉ định.
-  \item \textbf{Tham số:} Chấp nhận đúng một tham số bắt buộc theo cú pháp \texttt{sleep ticks}; \texttt{ticks} phải là một giá trị số hợp lệ.
-  \item \textbf{Xử lý lỗi:} Phát hiện trường hợp thiếu, thừa hoặc sai định dạng tham số và thông báo lỗi phù hợp.
+  \item \textbf{Chức năng:} Tạm dừng tiến trình hiện tại trong một số chu kỳ xung nhịp ngắt định thời (\texttt{ticks}) do người dùng chỉ định.
+  \item \textbf{Cú pháp và tham số:} Nhận đúng một tham số bắt buộc theo cú pháp \texttt{sleep ticks}, trong đó \texttt{ticks} phải là chuỗi số nguyên không âm hợp lệ.
+  \item \textbf{Mã thoát và xử lý lỗi:} Thoát với mã $0$ khi hoàn thành; thoát với mã $1$ và thông báo lỗi rõ ràng ra \texttt{stderr} (\texttt{fd = 2}) nếu thiếu, thừa đối số hoặc tham số chứa ký tự không hợp lệ.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Tick và thời gian hệ thống:} Tick là đơn vị đếm theo nhịp ngắt của bộ định thời trong xv6. Số tick cho biết khoảng cần chờ, nhưng không thể hiểu trực tiếp là số giây.
-  \item \textbf{Trạng thái chờ của tiến trình:} Một tiến trình có thể tạm ngừng thực thi cho đến khi điều kiện chờ được đáp ứng. System call \texttt{sleep()} sử dụng cơ chế này, để tiến trình nhường CPU thay vì liên tục kiểm tra đồng hồ.
-  \item \textbf{Chuyển đổi tham số số:} Tham số dòng lệnh ban đầu là chuỗi ký tự, kể cả khi người dùng nhập một số. Kiểm tra chuỗi trước khi chuyển đổi giúp phân biệt giá trị số với dữ liệu sai định dạng.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Lệnh \texttt{sleep} sử dụng cơ chế chờ của hệ điều hành thay vì tự đếm thời gian bằng một vòng lặp. Sau khi kiểm tra tham số không rỗng và chỉ chứa chữ số, chương trình chuyển giá trị nhập thành số tick rồi yêu cầu tạm dừng tiến trình. Trong thời gian đó, tiến trình không chiếm CPU để chờ, nên hệ thống có thể chạy các công việc khác. Hết khoảng chờ, tiến trình được phép chạy tiếp và kết thúc. Thời lượng ở đây được tính theo tick của xv6, không phải theo giây.
+Chương trình được nhóm hiện thực trong tệp \path{user/sleep.c}. Toàn bộ luồng xử lý được tổ chức gọn gàng trong hàm \texttt{main(int argc, char *argv[])} theo các bước tuần tự:
+\begin{enumerate}
+  \item \textbf{Kiểm tra số lượng đối số:} Kiểm tra điều kiện \texttt{argc != 2}. Nếu người dùng không nhập tham số hoặc nhập nhiều hơn một tham số, chương trình in cú pháp chuẩn \texttt{fprintf(2, "Usage: sleep ticks\textbackslash n")} và thoát ngay bằng \texttt{exit(1)}.
+  \item \textbf{Xác thực định dạng số nguyên:} Hàm \texttt{atoi()} của thư viện người dùng trong xv6 không có cơ chế phát hiện lỗi cú pháp (nó tự động dừng khi gặp ký tự lạ mà không thông báo lỗi). Do đó, nhóm đã chủ động duyệt qua từng ký tự của chuỗi \texttt{argv[1]}. Nếu chuỗi rỗng (\texttt{*s == '\textbackslash 0'}) hoặc chứa bất kỳ ký tự nào nằm ngoài khoảng \texttt{'0'} đến \texttt{'9'} (\texttt{*s < '0' || *s > '9'}), chương trình lập tức in thông báo lỗi \texttt{fprintf(2, "sleep: invalid ticks '\%s'\textbackslash n", argv[1])} và thoát với \texttt{exit(1)}.
+  \item \textbf{Tạm dừng và kết thúc:} Sau khi chuỗi được xác thực hợp lệ, chương trình gọi \texttt{atoi(argv[1])} để nhận giá trị số nguyên và chuyển giao quyền kiểm soát cho kernel thông qua system call \texttt{sleep(ticks)}. Tiến trình nhường CPU trong đúng khoảng thời gian yêu cầu, sau đó được đánh thức và thoát sạch sẽ bằng \texttt{exit(0)}.
+\end{enumerate}
 
-Mã giả dưới đây mô tả các bước kiểm tra tham số và tạm dừng tiến trình trong hàm \texttt{main()}.
+Mã giả dưới đây mô tả chính xác thuật toán xử lý trong \path{user/sleep.c}:
 
 \begin{algorithmblock}{\texttt{sleep}}
 \begin{algorithmcode}
-\textbf{PROCEDURE} Main(arguments)
-    \textbf{IF} arguments do not contain exactly one value \textbf{THEN}
-        \textbf{REPORT} usage error; \textbf{EXIT} 1
+\textbf{PROCEDURE} Main(argc, argv)
+    \textbf{IF} argc != 2 \textbf{THEN}
+        \textbf{PRINT\_ERR} "Usage: sleep ticks"
+        \textbf{EXIT} 1
     \textbf{END IF}
-    value ← the supplied argument
-    \textbf{IF} value is empty or contains a non-digit character \textbf{THEN}
-        \textbf{REPORT} invalid duration; \textbf{EXIT} 1
+    s ← argv[1]
+    \textbf{IF} *s == 0 \textbf{THEN}
+        \textbf{PRINT\_ERR} "sleep: invalid ticks", argv[1]
+        \textbf{EXIT} 1
     \textbf{END IF}
-    ticks ← ConvertToInteger(value)
-    Suspend the current process for ticks clock ticks
+    \textbf{FOR EACH} character c in s \textbf{DO}
+        \textbf{IF} c < '0' OR c > '9' \textbf{THEN}
+            \textbf{PRINT\_ERR} "sleep: invalid ticks", argv[1]
+            \textbf{EXIT} 1
+        \textbf{END IF}
+    \textbf{END FOR}
+    ticks ← atoi(argv[1])
+    sleep(ticks)
     \textbf{EXIT} 0
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Phòng ngừa tham số phi số và chuỗi rỗng:} Bắt trọn vẹn các edge case như \texttt{sleep ""}, \texttt{sleep 10s}, \texttt{sleep -5}, \texttt{sleep abc}, ngăn chặn hoàn toàn việc gọi nhầm \texttt{sleep()} với giá trị không xác định.
+  \item \textbf{Tối ưu hiệu năng CPU:} Sử dụng cơ chế ngủ của kernel giúp tiến trình chuyển sang trạng thái \texttt{SLEEPING}, tránh tuyệt đối việc lãng phí tài nguyên CPU do chạy vòng lặp bận (\textit{busy-waiting}).
+\end{itemize}
 
 % --- 4.2. pingpong ---
 \subsection{\texttt{pingpong}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Minh họa giao tiếp hai chiều giữa tiến trình cha và tiến trình con bằng cách gửi ``ping'' và nhận phản hồi ``pong''.
-  \item \textbf{Tham số:} Không nhận tham số dòng lệnh; lệnh được thực thi trực tiếp bằng \texttt{pingpong}.
-  \item \textbf{Kết quả:} In thông báo giao tiếp kèm PID của các tiến trình và kết thúc bình thường sau khi trao đổi hoàn tất.
+  \item \textbf{Chức năng:} Minh họa giao tiếp liên tiến trình (IPC) hai chiều đồng bộ giữa tiến trình cha và tiến trình con bằng cách trao đổi một byte qua cặp đường ống (\textit{pipes}).
+  \item \textbf{Cú pháp và tham số:} Lệnh được thực thi trực tiếp bằng cú pháp \texttt{pingpong}, không nhận tham số dòng lệnh.
+  \item \textbf{Định dạng xuất và mã thoát:} Tiến trình con in \texttt{"<PID>: received ping\textbackslash n"}, tiến trình cha in \texttt{"<PID>: received pong\textbackslash n"}. Thoát với mã $0$ khi hoàn thành; thoát với mã $1$ nếu bất kỳ thao tác tạo pipe, fork hoặc truyền nhận dữ liệu nào bị lỗi.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Tiến trình cha và con:} Sau \texttt{fork()}, cha và con tiếp tục chạy độc lập từ cùng vị trí nhưng nhận giá trị trả về khác nhau. Nhờ đó, chương trình phân chia được vai trò gửi và phản hồi cho hai tiến trình.
-  \item \textbf{Pipe một chiều:} Một pipe chỉ truyền dữ liệu theo một hướng, từ đầu ghi đến đầu đọc. Lượt trao đổi cần cả gửi lẫn phản hồi nên sử dụng hai pipe, mỗi pipe đảm nhiệm một chiều.
-  \item \textbf{Đồng bộ tiến trình:} Thao tác đọc pipe có thể chờ khi chưa có dữ liệu, còn \texttt{wait()} cho phép cha chờ con kết thúc. Hai cơ chế này xác lập quan hệ trước--sau giữa các công việc mà không phụ thuộc tiến trình nào được cấp CPU trước.
-  \item \textbf{Các đầu pipe được kế thừa:} Tiến trình con thừa hưởng các đầu pipe đã mở trước khi được tạo. Mỗi bên cần đóng những đầu không dùng và chỉ giữ đầu đọc, đầu ghi phù hợp với vai trò của mình.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Hai tiến trình trao đổi qua hai pipe, một pipe cho chiều cha gửi sang con và một pipe cho chiều phản hồi. Tiến trình cha gửi một byte để bắt đầu lượt trao đổi. Khi nhận được byte này, tiến trình con in thông báo nhận ping, gửi lại byte đó rồi kết thúc. Cha chờ con hoàn tất, đọc phản hồi và in thông báo nhận pong. Nhờ trình tự gửi--nhận này, thông báo ping luôn xuất hiện trước pong mà không cần quy định tiến trình nào phải được chạy trước. Các đầu pipe không sử dụng được đóng ở mỗi bên; những đầu còn lại cũng được đóng sau khi trao đổi xong.
+Chương trình được hiện thực tại \path{user/pingpong.c}. Do mỗi đường ống trong Unix chỉ truyền dữ liệu một chiều (\textit{simplex}), nhóm đã thiết lập một cặp đường ống để hiện thực kênh giao tiếp hai chiều hoàn chỉnh:
+\begin{enumerate}
+  \item \textbf{Khởi tạo hai đường ống riêng biệt:} Khởi tạo ống \texttt{p[2]} (cho chiều truyền từ cha sang con) và ống \texttt{q[2]} (cho chiều phản hồi từ con về cha) trước khi tách tiến trình. Nếu bất kỳ lời gọi \texttt{pipe()} nào thất bại, chương trình in thông báo lỗi ra \texttt{stderr} và thoát với \texttt{exit(1)}.
+  \item \textbf{Tách nhánh bằng \texttt{fork()}:}
+  \begin{itemize}
+    \item \textbf{Tiến trình con (\texttt{pid == 0}):} Lập tức đóng đầu ghi \texttt{p[1]} và đầu đọc \texttt{q[0]}. Con chờ nhận 1 byte từ cha thông qua \texttt{read(p[0], \&c, 1)}. Khi nhận thành công, con in định danh và thông điệp \texttt{printf("\%d: received ping\textbackslash n", getpid())}, sau đó gửi lại chính byte đó sang cha qua \texttt{write(q[1], \&c, 1)}. Cuối cùng, con đóng toàn bộ các đầu pipe còn lại (\texttt{p[0]} và \texttt{q[1]}) rồi thoát với \texttt{exit(0)}.
+    \item \textbf{Tiến trình cha (\texttt{pid > 0}):} Lập tức đóng đầu đọc \texttt{p[0]} và đầu ghi \texttt{q[1]}. Cha bắt đầu cuộc hội thoại bằng cách gửi 1 byte \texttt{'x'} vào \texttt{p[1]}, kiểm tra dữ liệu gửi thành công rồi đóng ngay \texttt{p[1]}. Tiếp theo, cha gọi \texttt{wait(0)} để tạm dừng và chờ con xử lý xong. Khi con đã phản hồi và kết thúc, cha đọc byte nhận được từ \texttt{q[0]}, in thông điệp \texttt{printf("\%d: received pong\textbackslash n", getpid())}, đóng \texttt{q[0]} và thoát với \texttt{exit(0)}.
+  \end{itemize}
+\end{enumerate}
 
-Trình tự trao đổi giữa tiến trình cha và con được trình bày trong mã giả dưới đây, tương ứng với hàm \texttt{main()}.
+Trình tự trao đổi và đồng bộ hóa giữa hai tiến trình được mô tả qua mã giả dưới đây:
 
 \begin{algorithmblock}{\texttt{pingpong}}
 \begin{algorithmcode}
-\textbf{PROCEDURE} Main()
-    Create channels p (parent to child) and q (child to parent)
-    Create a child process
-    \textbf{IF} channel creation or process creation fails \textbf{THEN}
-        \textbf{REPORT} error; \textbf{EXIT} 1
+\textbf{PROCEDURE} Main(argc, argv)
+    Create pipe p (parent to child) and pipe q (child to parent)
+    \textbf{IF} pipe creation fails \textbf{THEN}
+        \textbf{PRINT\_ERR} "pingpong: pipe failed"; \textbf{EXIT} 1
     \textbf{END IF}
-    \textbf{IF} executing in the parent \textbf{THEN}
-        Close unused channel ends
-        Send one byte through p; close the sending end
-        Wait for the child to finish
-        Receive one byte through q
-        \textbf{OUTPUT} parent identifier and "received pong"
-        Close the receiving end
-    \textbf{ELSE}
-        Close unused channel ends
-        Receive one byte through p
-        \textbf{OUTPUT} child identifier and "received ping"
-        Send the same byte through q
-        Close the remaining channel ends
+    pid ← fork()
+    \textbf{IF} pid < 0 \textbf{THEN}
+        \textbf{PRINT\_ERR} "pingpong: fork failed"; \textbf{EXIT} 1
+    \textbf{ELSE IF} pid > 0 \textbf{THEN} \textit{// Tiến trình cha}
+        Close p[0]; Close q[1]
+        c ← 'x'
+        Write 1 byte c to p[1]; Close p[1]
+        wait(0) \textit{// Chờ tiến trình con hoàn tất}
+        Read 1 byte from q[0] into c; Close q[0]
+        \textbf{PRINT} getpid(), ": received pong"
+    \textbf{ELSE} \textit{// Tiến trình con}
+        Close p[1]; Close q[0]
+        Read 1 byte from p[0] into c
+        \textbf{PRINT} getpid(), ": received ping"
+        Write 1 byte c to q[1]
+        Close p[0]; Close q[1]
     \textbf{END IF}
-    On any send or receive failure, report error and exit 1
     \textbf{EXIT} 0
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Đảm bảo thứ tự hiển thị tuần tự:} Nhờ cơ chế chặn (*blocking*) tự nhiên của \texttt{read()} ở con và lệnh \texttt{wait(0)} ở cha, tiến trình con luôn in thông báo ping trước khi tiến trình cha in thông báo pong, loại bỏ hoàn toàn tình trạng tranh chấp hiển thị (*race condition*) mà không phụ thuộc vào thứ tự lập lịch CPU.
+  \item \textbf{Đóng sớm các đầu pipe không dùng:} Việc đóng các đầu pipe thừa ngay sau \texttt{fork()} giúp giải phóng các mục trong bảng \texttt{ofile} và triệt tiêu nguy cơ tắc nghẽn (*deadlock*).
+  \item \textbf{Thu hồi tiến trình con sạch sẽ:} Lời gọi \texttt{wait(0)} ở cha bảo đảm tiến trình con được giải phóng hoàn toàn khỏi bảng quản lý tiến trình, không để lại tiến trình ma (*zombie process*).
+\end{itemize}
 
 % --- 4.3. primes ---
 \subsection{\texttt{primes}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Sinh và in các số nguyên tố trong phạm vi từ 2 đến 280.
-  \item \textbf{Tham số:} Không nhận tham số dòng lệnh; phạm vi xử lý được cố định theo yêu cầu của bài thực hành.
-  \item \textbf{Mục tiêu xử lý:} Thể hiện mô hình sàng Eratosthenes đồng thời và bảo đảm mỗi số nguyên tố được xuất đúng một lần.
+  \item \textbf{Chức năng:} Tìm và in toàn bộ các số nguyên tố trong khoảng từ 2 đến 280 bằng giải thuật Sàng Eratosthenes đồng thời (\textit{Concurrent Prime Sieve}) theo mô hình CSP (Communicating Sequential Processes) của Doug McIlroy.
+  \item \textbf{Cú pháp và tham số:} Thực thi trực tiếp bằng lệnh \texttt{primes}, không nhận tham số dòng lệnh; phạm vi sàng được cố định từ 2 đến 280 theo yêu cầu bài thực hành.
+  \item \textbf{Định dạng xuất và mã thoát:} Mỗi số nguyên tố tìm được được in trên một dòng riêng biệt theo định dạng \texttt{"prime <n>\textbackslash n"}. Toàn bộ pipeline tiến trình phải kết thúc sạch sẽ với mã $0$.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Sàng số nguyên tố:} Mọi hợp số đều có ít nhất một ước nguyên tố nhỏ hơn nó. Loại dần các bội của những số nguyên tố đã tìm được sẽ giữ lại các ứng viên cho bước sàng tiếp theo.
-  \item \textbf{Pipeline tiến trình:} Pipeline chia công việc thành các bước nối tiếp, trong đó đầu ra của bước trước là đầu vào của bước sau. Với bài này, mỗi tiến trình đảm nhiệm một bộ lọc và truyền số qua pipe, không cần dùng chung một mảng dữ liệu.
-  \item \textbf{EOF và kết thúc chuỗi xử lý:} Bên đọc nhận EOF khi dữ liệu trong pipe đã hết và mọi đầu ghi đã đóng; vì vậy, mỗi bước chỉ giữ những đầu pipe cần dùng. Việc chờ tiến trình con hoàn tất giúp thu hồi thông tin tiến trình đã kết thúc và bảo đảm phần việc phía sau hoàn thành trước khi bước hiện tại thoát.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Các số từ 2 đến 280 được đưa lần lượt qua một chuỗi tiến trình, mỗi tiến trình thực hiện một bước sàng. Bước đầu lấy 2 làm số nguyên tố và loại các số chia hết cho 2. Những số còn lại được chuyển sang bước sau, nơi 3 được chọn và các bội của 3 tiếp tục bị loại. Cách xử lý này lặp lại cho đến khi không còn số cần xét. Số đầu tiên ở mỗi bước là số nguyên tố: nếu nó chia hết cho một số nguyên tố nhỏ hơn, nó đã bị loại ở bước sàng trước đó.
+Chương trình được hiện thực tại \path{user/primes.c}. Thay vì dùng một mảng đánh dấu trong bộ nhớ như giải thuật tuần tự truyền thống, nhóm xây dựng một chuỗi đường ống dẫn dữ liệu gồm nhiều tiến trình chạy đồng thời, trong đó mỗi tiến trình đóng vai trò là một bộ lọc số nguyên tố độc lập:
+\begin{enumerate}
+  \item \textbf{Tiến trình khởi tạo (\texttt{main}):} Tạo đường ống ban đầu \texttt{pipe(p)} rồi gọi \texttt{fork()}:
+  \begin{itemize}
+    \item Tiến trình cha đóng đầu đọc \texttt{close(p[0])}, đóng vai trò là nguồn cấp số (\textit{number generator}), đẩy tuần tự các số nguyên từ $2$ đến $280$ vào \texttt{p[1]}. Sau khi ghi xong, cha đóng \texttt{close(p[1])} để phát tín hiệu EOF và gọi \texttt{wait(0)} chờ toàn bộ chuỗi pipeline hoàn tất.
+    \item Tiến trình con đóng đầu ghi \texttt{close(p[1])} và gọi hàm đệ quy \texttt{primes(p[0])} để bắt đầu tầng sàng đầu tiên.
+  \end{itemize}
+  \item \textbf{Hàm xử lý một tầng sàng (\texttt{void primes(int left)}):}
+  \begin{itemize}
+    \item \textbf{Xác định số nguyên tố của tầng:} Đọc số đầu tiên từ pipe vào: \texttt{read(left, \&prime, sizeof(prime))}. Nếu không đọc đủ byte (bên trái đã đóng truyền EOF), tiến trình đóng \texttt{left} và thoát ngay bằng \texttt{exit(0)} (đây là điều kiện dừng đệ quy). Số đầu tiên nhận được chắc chắn là số nguyên tố; tiến trình in ngay ra màn hình: \texttt{printf("prime \%d\textbackslash n", prime)}.
+    \item \textbf{Lọc và chuyển tiếp dữ liệu:} Vòng lặp \texttt{while (read(left, \&n, sizeof(n)) == sizeof(n))} tiếp tục đọc các số kế tiếp:
+    \begin{itemize}
+      \item Nếu \texttt{n \% prime == 0}: Bỏ qua vì \texttt{n} là bội số của số nguyên tố hiện tại.
+      \item Nếu \texttt{n} không chia hết: Áp dụng kỹ thuật \textbf{khởi tạo lười} (\textit{lazy initialization}) cho kênh truyền bên phải (\texttt{right}). Chỉ khi nhận được số đầu tiên không chia hết, tiến trình mới tạo ống \texttt{pipe(p)} và tách tiến trình con mới bằng \texttt{fork()}:
+      \begin{itemize}
+        \item Tiến trình con mới sinh đóng đầu ghi \texttt{close(p[1])}, đóng pipe thừa kế của tầng cha \texttt{close(left)}, rồi gọi đệ quy \texttt{primes(p[0])}.
+        \item Tiến trình cha đóng đầu đọc \texttt{close(p[0])} và lưu \texttt{right = p[1]}.
+      \end{itemize}
+      Sau đó, tiến trình ghi \texttt{n} sang tầng kế tiếp: \texttt{write(right, \&n, sizeof(n))}.
+    \end{itemize}
+    \item \textbf{Đóng kênh và đồng bộ:} Khi đọc hết dữ liệu từ \texttt{left}, tiến trình đóng \texttt{close(left)}. Nếu đã tạo tầng bên phải (\texttt{right >= 0}), tiến trình đóng tiếp \texttt{close(right)} để kích hoạt EOF cho tầng con và gọi \texttt{wait(0)} chờ con kết thúc trước khi gọi \texttt{exit(0)}.
+  \end{itemize}
+\end{enumerate}
 
-Các bước sàng nối với nhau bằng pipe và xử lý từng số khi nhận được, không cần gom toàn bộ dãy còn lại vào bộ nhớ. Tiến trình kế tiếp chỉ được tạo khi có số vượt qua bước lọc hiện tại. Sau khi gửi hết dữ liệu, tiến trình đóng đầu ghi để báo hết dữ liệu cho bước sau, rồi chờ bước đó hoàn tất trước khi thoát.
-
-Mã giả dưới đây mô tả một bước sàng trong hàm \texttt{primes(left)}. Các bước tiếp theo áp dụng cùng cách xử lý cho những số còn lại.
+Mã giả của giải thuật sàng đồng thời được trình bày chi tiết dưới đây:
 
 \begin{algorithmblock}{\texttt{primes}}
 \begin{algorithmcode}
 \textbf{PROCEDURE} Primes(left)
-    prime ← ReceiveInteger(left)
-    \textbf{IF} a complete integer was not received \textbf{THEN}
+    \textbf{IF} read(left, &prime, sizeof(prime)) != sizeof(prime) \textbf{THEN}
         Close left; \textbf{EXIT} 0
     \textbf{END IF}
-    \textbf{OUTPUT} "prime" followed by prime
-    right ← no outgoing channel
-    \textbf{WHILE} a complete integer n can be received from left \textbf{DO}
-        \textbf{IF} n is divisible by prime \textbf{THEN}
+    \textbf{PRINT} "prime ", prime
+    right ← -1
+    \textbf{WHILE} read(left, &n, sizeof(n)) == sizeof(n) \textbf{DO}
+        \textbf{IF} n % prime == 0 \textbf{THEN}
             \textbf{CONTINUE}
         \textbf{END IF}
-        \textbf{IF} right has not been created \textbf{THEN}
-            Create a channel and a child process
-            \textbf{IF} creation fails \textbf{THEN}
-                \textbf{REPORT} error; \textbf{EXIT} 1
+        \textbf{IF} right < 0 \textbf{THEN} \textit{// Khởi tạo lười cho tầng kế}
+            pipe(p); pid ← fork()
+            \textbf{IF} pid == 0 \textbf{THEN} \textit{// Tầng con}
+                Close p[1]; Close left
+                Primes(p[0])
             \textbf{END IF}
-            Child closes unused ends and runs Primes(new channel)
-            Parent keeps the sending end as right
+            Close p[0]; right ← p[1]
         \textbf{END IF}
-        Send n through right
-        \textbf{IF} sending fails \textbf{THEN}
-            \textbf{REPORT} error; \textbf{EXIT} 1
-        \textbf{END IF}
+        Write n to right
     \textbf{END WHILE}
     Close left
-    \textbf{IF} right exists \textbf{THEN}
-        Close right; wait for the child to finish
+    \textbf{IF} right >= 0 \textbf{THEN}
+        Close right; wait(0)
     \textbf{END IF}
     \textbf{EXIT} 0
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Kiểm soát ngưỡng File Descriptor (\texttt{NOFILE = 16}):} Đây là rủi ro lớn nhất của bài toán sàng đa tiến trình. Nhóm giải quyết triệt để bằng cách đóng ngay các đầu pipe thừa kế (\texttt{p[1]} và \texttt{left}) trong tiến trình con \textit{trước khi} gọi đệ quy tầng tiếp theo, đảm bảo mỗi tiến trình chỉ giữ đúng 1 đầu đọc và tối đa 1 đầu ghi.
+  \item \textbf{Cơ chế kích hoạt EOF dây chuyền (\textit{Cascade EOF}):} Khi tiến trình \texttt{main} ghi hết số và đóng \texttt{p[1]}, tầng sàng đầu tiên nhận EOF $\to$ đóng \texttt{right} $\to$ tầng thứ hai nhận EOF $\to$ lan truyền lần lượt đến cuối chuỗi. Nhờ đó, tất cả các tiến trình tự động giải phóng tuần tự mà không bị treo bế tắc (*deadlock*).
+  \item \textbf{Thu hồi tiến trình sạch sẽ:} Lời gọi \texttt{wait(0)} ở mỗi tầng cha bảo đảm thu dọn toàn bộ các tiến trình con theo chiều ngược từ ngọn về gốc, không để rò rỉ bất kỳ tiến trình zombie nào.
+\end{itemize}
 
 % --- 4.4. cp ---
 \subsection{\texttt{cp}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Sao chép toàn bộ nội dung từ tệp nguồn \texttt{src} sang tệp đích \texttt{dst}.
-  \item \textbf{Tham số:} Nhận đúng hai tham số đường dẫn theo cú pháp \texttt{cp src dst}.
-  \item \textbf{Xử lý lỗi:} Kiểm tra nguồn không hợp lệ, đích không thể tạo hoặc mở, trường hợp nguồn và đích cùng trỏ tới một tệp, đồng thời báo lỗi khi cú pháp không đúng.
+  \item \textbf{Chức năng:} Sao chép toàn bộ nội dung dữ liệu từ tệp tin nguồn (\texttt{src}) sang tệp tin đích (\texttt{dst}).
+  \item \textbf{Cú pháp và tham số:} Nhận đúng hai tham số bắt buộc theo cú pháp \texttt{cp src dst}.
+  \item \textbf{Điều kiện tiên quyết:} Tệp nguồn phải tồn tại và là tệp thông thường (\texttt{T\_FILE}); nếu tệp đích đã tồn tại thì tệp đích cũng phải là tệp thông thường và \textbf{không được trùng với tệp nguồn}.
+  \item \textbf{Mã thoát và xử lý lỗi:} Thoát với mã $0$ khi thành công; thoát với mã $1$ và thông báo lỗi rõ ràng ra \texttt{stderr} nếu sai cú pháp, không mở được tệp, lỗi đọc/ghi đĩa hoặc phát hiện tệp nguồn và đích trùng nhau.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Bộ mô tả tệp:} Khi mở một tệp, tiến trình nhận một số nguyên dùng để truy cập tệp đó trong các thao tác đọc, ghi và đóng. Hai tệp nguồn và đích được mở với chế độ khác nhau, phù hợp với chiều sao chép.
-  \item \textbf{Đọc--ghi theo khối:} Bộ đệm giữ một phần dữ liệu trong lúc chuyển từ nguồn sang đích, nên không cần nạp toàn bộ tệp vào bộ nhớ. Số byte thực sự đọc được quyết định lượng cần ghi, đặc biệt ở phần cuối tệp.
-  \item \textbf{Nhận diện tệp và liên kết cứng:} Hai đường dẫn khác nhau có thể trỏ đến cùng một tệp thông qua liên kết cứng. Cặp thông tin thiết bị và số inode, tức mã nhận diện tệp trên thiết bị, cho phép phát hiện trường hợp này trước khi ghi đè nội dung.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Trước khi sao chép, cần xác định nguồn và đích có phải là hai tệp khác nhau hay không. Chỉ so sánh đường dẫn là chưa đủ, bởi hai tên có thể cùng trỏ đến một tệp. Chương trình vì vậy kiểm tra thông tin nhận diện của tệp và loại tệp trước khi xóa nội dung đích. Nguồn phải là tệp thông thường; nếu đích đã tồn tại thì đích cũng phải đáp ứng điều kiện này.
+Chương trình được hiện thực tại \path{user/cp.c} với luồng xử lý tuần tự chặt chẽ:
+\begin{enumerate}
+  \item \textbf{Kiểm tra đối số dòng lệnh:} Kiểm tra \texttt{argc != 3}. Nếu sai số lượng đối số, in hướng dẫn \texttt{fprintf(2, "Usage: cp src dst\textbackslash n")} và thoát với \texttt{exit(1)}.
+  \item \textbf{Mở và kiểm tra tệp nguồn:} Mở tệp nguồn với cờ \texttt{O\_RDONLY}. Lấy siêu dữ liệu bằng \texttt{fstat(srcfd, \&srcstat)}. Nếu \texttt{srcstat.type != T\_FILE}, chương trình in lỗi \texttt{"cp: source must be a regular file\textbackslash n"}, đóng \texttt{srcfd} và thoát.
+  \item \textbf{Kiểm tra an toàn tệp đích trước khi ghi đè:} Nếu tệp đích đã tồn tại (\texttt{stat(argv[2], \&dststat) == 0}):
+  \begin{itemize}
+    \item \textbf{Phát hiện tệp trùng lặp:} So sánh cặp số hiệu thiết bị và Inode: \texttt{srcstat.dev == dststat.dev \&\& srcstat.ino == dststat.ino}. Nếu trùng nhau, chương trình in lỗi \texttt{"cp: source and destination are the same file\textbackslash n"}, đóng \texttt{srcfd} và thoát. Việc kiểm tra này bắt buộc phải thực hiện \textit{trước} khi mở tệp đích với cờ \texttt{O\_TRUNC}, nhằm ngăn chặn tuyệt đối nguy cơ tệp nguồn bị xóa trắng nếu người dùng gõ lệnh dạng \texttt{cp a a} hoặc thông qua hai liên kết cứng trỏ cùng Inode.
+    \item \textbf{Kiểm tra loại tệp đích:} Xác nhận tệp đích phải là tệp thường (\texttt{dststat.type == T\_FILE}).
+  \end{itemize}
+  \item \textbf{Mở và cắt cụt tệp đích:} Mở tệp đích với tổ hợp cờ \texttt{O\_CREATE | O\_WRONLY | O\_TRUNC}. Nếu thất bại, đóng \texttt{srcfd} và báo lỗi.
+  \item \textbf{Truyền dữ liệu theo khối (\textit{Buffer Streaming}):}
+  \begin{itemize}
+    \item Khởi tạo bộ đệm tĩnh \texttt{char buf[512]}, tương ứng đúng kích thước một khối đĩa (\textit{block size}) của hệ thống tệp xv6.
+    \item Vòng lặp \texttt{while ((n = read(srcfd, buf, sizeof(buf))) > 0)} đọc dữ liệu theo từng khối và ghi đúng $n$ byte vào tệp đích: \texttt{if (write(dstfd, buf, n) != n)}. Nếu số byte ghi thực tế không bằng $n$, chương trình báo lỗi ghi đĩa, đóng cả hai tệp và thoát với \texttt{exit(1)}.
+    \item Sau vòng lặp, kiểm tra \texttt{n < 0} để phát hiện lỗi đọc tệp nguồn.
+  \end{itemize}
+  \item \textbf{Đóng tệp và kết thúc:} Đóng cả hai tập tin mô tả \texttt{close(srcfd)}, \texttt{close(dstfd)} và kết thúc thành công với \texttt{exit(0)}.
+\end{enumerate}
 
-Dữ liệu sau đó được đọc từ nguồn và ghi sang đích theo từng khối tối đa 512 byte. Mỗi lượt ghi đúng lượng dữ liệu vừa đọc được, nên phần cuối của tệp vẫn được sao chép đầy đủ dù ngắn hơn một khối. Việc sao chép tuần tự giữ nguyên thứ tự các byte và không đòi hỏi bộ nhớ tăng theo kích thước tệp. Khi gặp lỗi đọc hoặc ghi, chương trình dừng và báo lỗi; dữ liệu đã ghi vào đích trước đó không được khôi phục.
-
-Quy trình kiểm tra tệp và sao chép dữ liệu trong hàm \texttt{main()} được tóm tắt bằng mã giả dưới đây.
+Mã giả chi tiết của tiện ích \texttt{cp} được trình bày dưới đây:
 
 \begin{algorithmblock}{\texttt{cp}}
 \begin{algorithmcode}
-\textbf{PROCEDURE} Main(arguments)
-    Require exactly two arguments: source and destination
-    Open source and verify that it is a regular file
-    \textbf{IF} destination already exists \textbf{THEN}
-        Verify that it is a different regular file
+\textbf{PROCEDURE} Main(argc, argv)
+    \textbf{IF} argc != 3 \textbf{THEN}
+        \textbf{PRINT\_ERR} "Usage: cp src dst"; \textbf{EXIT} 1
     \textbf{END IF}
-    \textbf{IF} an argument or file check fails \textbf{THEN}
-        Close opened files; report error; \textbf{EXIT} 1
+    srcfd ← open(argv[1], O_RDONLY)
+    \textbf{IF} srcfd < 0 OR fstat(srcfd, &srcstat) < 0 \textbf{THEN}
+        \textbf{PRINT\_ERR} "cannot open/stat source"; \textbf{EXIT} 1
     \textbf{END IF}
-    Create or open destination, replacing its old contents
-    \textbf{IF} destination cannot be opened \textbf{THEN}
-        Close source; report error; \textbf{EXIT} 1
+    \textbf{IF} srcstat.type != T_FILE \textbf{THEN}
+        \textbf{PRINT\_ERR} "source must be regular file"; Close srcfd; \textbf{EXIT} 1
     \textbf{END IF}
-    \textbf{WHILE} reading source yields a nonempty portion \textbf{DO}
-        Write exactly that portion to destination
-        \textbf{IF} the full portion was not written \textbf{THEN}
-            Close both files; report error; \textbf{EXIT} 1
+    \textbf{IF} stat(argv[2], &dststat) == 0 \textbf{THEN}
+        \textbf{IF} srcstat.dev == dststat.dev AND srcstat.ino == dststat.ino \textbf{THEN}
+            \textbf{PRINT\_ERR} "same file"; Close srcfd; \textbf{EXIT} 1
+        \textbf{END IF}
+        \textbf{IF} dststat.type != T_FILE \textbf{THEN}
+            \textbf{PRINT\_ERR} "dst must be regular file"; Close srcfd; \textbf{EXIT} 1
+        \textbf{END IF}
+    \textbf{END IF}
+    dstfd ← open(argv[2], O_CREATE | O_WRONLY | O_TRUNC)
+    \textbf{IF} dstfd < 0 \textbf{THEN}
+        Close srcfd; \textbf{EXIT} 1
+    \textbf{END IF}
+    \textbf{WHILE} (n ← read(srcfd, buf, sizeof(buf))) > 0 \textbf{DO}
+        \textbf{IF} write(dstfd, buf, n) != n \textbf{THEN}
+            Close srcfd; Close dstfd; \textbf{EXIT} 1
         \textbf{END IF}
     \textbf{END WHILE}
-    \textbf{IF} the last read failed \textbf{THEN}
-        Close both files; report error; \textbf{EXIT} 1
+    \textbf{IF} n < 0 \textbf{THEN}
+        Close srcfd; Close dstfd; \textbf{EXIT} 1
     \textbf{END IF}
-    Close both files
+    Close srcfd; Close dstfd
     \textbf{EXIT} 0
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
 
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Phòng chống mất dữ liệu do tệp trùng nhau:} Bắt chính xác trường hợp tệp nguồn và tệp đích là một dựa trên cặp định danh \texttt{(dev, ino)}, bảo đảm không bị xóa trắng nội dung tệp nguồn khi mở đích bằng \texttt{O\_TRUNC}.
+  \item \textbf{Xử lý tệp kích thước bất kỳ:} Nhờ cơ chế streaming theo khối 512 byte, chương trình xử lý mượt mà từ tệp rỗng (0 byte) đến các tệp có dung lượng lớn mà không làm tiêu tốn bộ nhớ RAM.
+  \item \textbf{Quản lý đóng Descriptor triệt để:} Mọi điểm rẽ nhánh lỗi (*early exit*) đều được giải phóng toàn bộ các file descriptor đang mở, tránh rò rỉ tài nguyên hệ thống.
+\end{itemize}
+
 % --- 4.5. tree ---
 \subsection{\texttt{tree}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Hiển thị thư mục và tệp tin theo dạng cây phân cấp.
-  \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là thư mục hiện hành \texttt{.}; hỗ trợ \texttt{-L depth} để giới hạn độ sâu và \texttt{-d} để chỉ liệt kê thư mục.
-  \item \textbf{Xử lý lỗi:} Phát hiện và thông báo rõ ràng các đường dẫn, tham số hoặc tùy chọn không hợp lệ.
+  \item \textbf{Chức năng:} Hiển thị cấu trúc cây phân cấp của thư mục và tệp tin một cách trực quan bằng các ký tự thụt lề nhánh \texttt{"|\_\_ "}.
+  \item \textbf{Cú pháp và tham số:} \texttt{tree [path] [-d] [-L depth]}, trong đó:
+  \begin{itemize}
+    \item \texttt{path}: Đường dẫn thư mục gốc cần duyệt (tùy chọn, mặc định là \texttt{"."} --- thư mục hiện hành).
+    \item \texttt{-d}: Tùy chọn chỉ hiển thị thư mục (\textit{directories only}), bỏ qua các tệp tin thường.
+    \item \texttt{-L depth}: Giới hạn độ sâu tối đa của cây duyệt (\texttt{depth > 0}).
+  \end{itemize}
+  \item \textbf{Mã thoát và xử lý lỗi:} Thoát với mã $0$ khi thành công; thoát với mã $1$ và thông báo chi tiết ra \texttt{stderr} nếu tùy chọn không hợp lệ, thiếu đối số cho \texttt{-L}, giá trị độ sâu không dương, hoặc không thể truy cập đường dẫn gốc.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Cây thư mục:} Một thư mục chứa các mục trỏ đến tệp hoặc thư mục con, tạo nên cấu trúc phân cấp. Biết loại của từng mục giúp xác định nhánh nào có thể tiếp tục duyệt; trong xv6, thông tin theo đường dẫn được lấy qua hàm thư viện \texttt{stat()}.
-  \item \textbf{Đệ quy và duyệt chiều sâu:} Mỗi thư mục con có thể được xử lý theo cùng cách với thư mục chứa nó. Đệ quy cho phép đi sâu vào một nhánh rồi quay lại các mục còn lại, đồng thời dùng độ sâu hiện tại để xác định mức thụt lề.
-  \item \textbf{Điều kiện dừng khi duyệt:} Hai mục \texttt{.} và \texttt{..} trỏ đến thư mục hiện tại và thư mục cha, nên không được xem là nhánh mới. Giới hạn độ sâu là một điều kiện dừng khác, cho phép chỉ duyệt đến số tầng người dùng yêu cầu.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Từ thư mục được chọn, chương trình duyệt theo chiều sâu: in tên một mục, duyệt hết nội dung bên trong nếu đó là thư mục, rồi mới chuyển sang mục kế tiếp. Mức thụt lề tăng theo độ sâu, thể hiện vị trí của từng mục trong cây. Hai mục \texttt{.} và \texttt{..} được bỏ qua để không quay lại thư mục hiện tại hoặc thư mục cha; các mục chưa sử dụng cũng không được đưa vào kết quả.
+Chương trình được hiện thực tại \path{user/tree.c}, chia thành 3 phần rõ ràng:
+\begin{enumerate}
+  \item \textbf{Phân tích đối số dòng lệnh (\texttt{main}):}
+  Khởi tạo các biến cấu hình toàn cục: \texttt{path = "."}, \texttt{max\_depth = -1}, \texttt{only\_dir = 0}. Vòng lặp duyệt \texttt{argv} để bắt cờ \texttt{-d}, cờ \texttt{-L} (kèm kiểm tra thiếu tham số \texttt{i + 1 >= argc} và xác thực \texttt{max\_depth = atoi(argv[++i]) > 0}), phát hiện cờ lạ \texttt{argv[i][0] == '-'}, và nhận diện đường dẫn chỉ định.
+  \item \textbf{Hàm điều phối gốc (\texttt{void tree(char *path)}):}
+  Kiểm tra đường dẫn gốc bằng \texttt{stat(path, \&st)}. Nếu là tệp thường, in tên tệp rồi dừng (nếu không bật \texttt{-d}). Nếu là thư mục, in tên thư mục gốc và gọi hàm duyệt đệ quy \texttt{tree\_traverse(path, 0)}.
+  \item \textbf{Hàm duyệt đệ quy (\texttt{void tree\_traverse(char *path, int level)}):}
+  \begin{itemize}
+    \item \textbf{Điều kiện dừng độ sâu:} Nếu \texttt{max\_depth != -1 \&\& level >= max\_depth}, hàm lập tức quay lui (\texttt{return}).
+    \item \textbf{Mở thư mục và kiểm tra tràn đệm:} Mở thư mục \texttt{fd = open(path, O\_RDONLY)}. Kiểm tra điều kiện an toàn độ dài: \texttt{strlen(path) + 1 + DIRSIZ + 1 > sizeof(buf)} (với \texttt{buf[256]}). Nếu vượt quá ngưỡng an toàn, in thông báo lỗi \texttt{"tree: path too long\textbackslash n"}, đóng \texttt{fd} và quay lui.
+    \item \textbf{Ghép tiền tố đường dẫn:} Sao chép \texttt{path} vào \texttt{buf} và chèn dấu \texttt{'/'} ở cuối.
+    \item \textbf{Đọc và lọc các bản ghi \texttt{struct dirent}:}
+    Vòng lặp \texttt{while (read(fd, \&de, sizeof(de)) == sizeof(de))}:
+    \begin{itemize}
+      \item Bỏ qua entry trống: \texttt{de.inum == 0}.
+      \item \textbf{Bỏ qua mục đặc biệt:} \texttt{!strcmp(de.name, ".") || !strcmp(de.name, "..")}.
+      \item Chuẩn hóa chuỗi tên tệp kết thúc bằng \texttt{NULL}: \texttt{name[DIRSIZ] = 0}.
+      \item Nối tên vào đường dẫn đầy đủ \texttt{buf} và lấy thông tin \texttt{stat(buf, \&st)}. Nếu tệp không đọc được thông tin, in cảnh báo và bỏ qua.
+      \item Nếu cờ \texttt{only\_dir} bật mà \texttt{st.type != T\_DIR}, bỏ qua không in.
+      \item In nhánh thụt lề bằng hàm trợ giúp \texttt{print\_indent(level + 1)} (in các khoảng trắng \texttt{"   "} và ký tự \texttt{"|\_\_ "}) kèm tên \texttt{name}.
+      \item Nếu mục là thư mục con (\texttt{st.type == T\_DIR}), gọi đệ quy tiếp tục: \texttt{tree\_traverse(buf, level + 1)}.
+    \end{itemize}
+    \item Đóng thư mục \texttt{close(fd)} ngay khi duyệt hết các entry của tầng hiện tại.
+  \end{itemize}
+\end{enumerate}
 
-Tùy chọn \texttt{-L} giới hạn số tầng được hiển thị, còn \texttt{-d} chỉ giữ lại các thư mục. Khi đạt độ sâu cho phép, chương trình không duyệt sâu hơn nhánh đó. Nếu đường dẫn đầu vào là một tệp thay vì thư mục, kết quả chỉ gồm tên tệp, trừ trường hợp đang bật \texttt{-d}.
-
-Mã giả dưới đây thể hiện cách duyệt và hiển thị một nhánh thư mục, dựa trên hàm \texttt{tree\_traverse(path, level)}.
+Mã giả của giải thuật duyệt cây thư mục được mô tả chi tiết dưới đây:
 
 \begin{algorithmblock}{\texttt{tree}}
 \begin{algorithmcode}
 \textbf{PROCEDURE} TreeTraverse(path, level)
-    \textbf{IF} a depth limit is set and level reaches it \textbf{THEN}
+    \textbf{IF} max_depth != -1 AND level >= max_depth \textbf{THEN}
         \textbf{RETURN}
     \textbf{END IF}
-    Open directory path
-    \textbf{IF} opening fails \textbf{THEN}
-        \textbf{REPORT} error; \textbf{RETURN}
+    fd ← open(path, O_RDONLY)
+    \textbf{IF} fd < 0 \textbf{THEN}
+        \textbf{PRINT\_ERR} "cannot open ", path; \textbf{RETURN}
     \textbf{END IF}
-    \textbf{IF} child paths would exceed the allowed length \textbf{THEN}
-        Close directory; report error; \textbf{RETURN}
+    \textbf{IF} strlen(path) + 1 + DIRSIZ + 1 > sizeof(buf) \textbf{THEN}
+        \textbf{PRINT\_ERR} "path too long"; Close fd; \textbf{RETURN}
     \textbf{END IF}
-    \textbf{FOR EACH} entry read from directory \textbf{DO}
-        \textbf{IF} entry is unused, "." or ".." \textbf{THEN}
+    Format buf with path and trailing '/'
+    \textbf{WHILE} read(fd, &de, sizeof(de)) == sizeof(de) \textbf{DO}
+        \textbf{IF} de.inum == 0 OR de.name is "." OR ".." \textbf{THEN}
             \textbf{CONTINUE}
         \textbf{END IF}
-        childPath ← Join(path, entry.name)
-        \textbf{IF} information for childPath cannot be obtained \textbf{THEN}
-            \textbf{REPORT} error; \textbf{CONTINUE}
-        \textbf{END IF}
-        \textbf{IF} directories-only mode excludes entry \textbf{THEN}
+        Construct child path in buf; stat(buf, &st)
+        \textbf{IF} only_dir AND st.type != T_DIR \textbf{THEN}
             \textbf{CONTINUE}
         \textbf{END IF}
-        Display entry.name with indentation for level + 1
-        \textbf{IF} entry is a directory \textbf{THEN}
-            TreeTraverse(childPath, level + 1)
+        PrintIndent(level + 1); \textbf{PRINT} de.name
+        \textbf{IF} st.type == T_DIR \textbf{THEN}
+            TreeTraverse(buf, level + 1)
         \textbf{END IF}
-    \textbf{END FOR}
-    Close directory
+    \textbf{END WHILE}
+    Close fd
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Triệt tiêu lặp vô hạn:} Bắt buộc bỏ qua hai mục \texttt{"."} và \texttt{".."} giúp ngăn chặn hàm đệ quy chạy quẩn giữa thư mục con và cha, bảo vệ hệ thống khỏi lỗi tràn ngăn xếp bộ nhớ (\textit{stack overflow}).
+  \item \textbf{Phòng chống tràn đệm đường dẫn:} Cơ chế kiểm tra độ dài đường dẫn trước khi ghép chuỗi bảo đảm an toàn cho bộ đệm cố định 256 byte.
+  \item \textbf{Đóng sớm Descriptor ở mỗi tầng đệ quy:} Việc đóng \texttt{close(fd)} ngay khi quét xong thư mục bảo đảm số lượng descriptor đồng thời chỉ tỷ lệ thuận với độ sâu tối đa của cây duyệt, không vượt quá giới hạn \texttt{NOFILE = 16}.
+\end{itemize}
 
 % --- 4.6. du ---
 \subsection{\texttt{du}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} Tính và hiển thị dung lượng sử dụng của tệp hoặc thư mục theo đơn vị byte.
-  \item \textbf{Tham số:} Nhận đường dẫn tùy chọn \texttt{path}, mặc định là \texttt{.}; hỗ trợ \texttt{-s} để chỉ in tổng dung lượng và \texttt{-a} để hiển thị thêm dung lượng của từng tệp.
-  \item \textbf{Đầu ra:} Hiển thị dung lượng theo byte cùng đường dẫn tương ứng và tuân theo chế độ hiển thị đã chọn.
+  \item \textbf{Chức năng:} Ước tính dung lượng sử dụng đĩa (\textit{Disk Usage}) của thư mục hoặc tệp tin theo đơn vị byte.
+  \item \textbf{Cú pháp và tham số:} \texttt{du [-a] [-s] [path]}, trong đó:
+  \begin{itemize}
+    \item \texttt{path}: Đường dẫn cần tính dung lượng (mặc định là \texttt{"."} --- thư mục hiện hành).
+    \item \texttt{-a}: Hiển thị chi tiết dung lượng của từng tệp tin bên cạnh các thư mục (\textit{all files}).
+    \item \texttt{-s}: Chế độ tóm tắt (\textit{summary}), chỉ hiển thị một dòng duy nhất ghi tổng dung lượng của đường dẫn gốc.
+  \end{itemize}
+  \item \textbf{Định dạng xuất và mã thoát:} Hiển thị theo định dạng \texttt{"<dung\_lượng>\textbackslash t<đường\_dẫn>\textbackslash n"}. Thoát với mã $0$ khi thành công; thoát với mã $1$ và thông báo lỗi nếu gặp tùy chọn không hợp lệ hoặc không truy cập được đường dẫn gốc.
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{Thông tin kích thước tệp:} Hệ thống tệp lưu kích thước của từng tệp trong thông tin quản lý của nó. Lấy giá trị này đủ để thống kê số byte, không cần đọc lại toàn bộ nội dung tệp.
-  \item \textbf{Duyệt hậu thứ tự:} Khi kết quả của thư mục cha phụ thuộc các mục con, các mục con phải được tính trước. Cách duyệt này cho phép mỗi nhánh trả về một tổng để cộng vào thư mục chứa nó.
-  \item \textbf{Kích thước dữ liệu và dung lượng đĩa:} Số byte của tệp không đồng nhất với số khối đĩa được cấp phát để lưu tệp. Phép tính trong bài cộng kích thước các tệp theo byte, không cộng kích thước bản thân thư mục hay quy đổi sang dung lượng khối đĩa.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Dung lượng của một thư mục được tính từ các tệp và thư mục con bên trong. Với tệp thông thường hoặc tệp thiết bị, chương trình lấy kích thước do hệ thống ghi nhận. Với thư mục con, chương trình tính xong tổng của nhánh đó rồi cộng vào thư mục cha. Kết quả vì vậy được tổng hợp từ dưới lên: các mục con hoàn tất trước, thư mục chứa chúng hoàn tất sau.
+Chương trình được hiện thực tại \path{user/du.c}. Giải thuật tính dung lượng sử dụng mô hình duyệt hậu thứ tự (\textit{post-order traversal}), bảo đảm các mục con được tính toán và tích lũy trước khi hoàn tất thư mục cha:
+\begin{enumerate}
+  \item \textbf{Phân tích đối số dòng lệnh (\texttt{main}):}
+  Khởi tạo các cờ cấu hình: \texttt{all\_files = 0}, \texttt{summary = 0}, \texttt{path = "."}. Vòng lặp duyệt \texttt{argv} để nhận diện cờ \texttt{-a}, \texttt{-s}, báo lỗi và thoát khi gặp cờ không xác định (\texttt{argv[i][0] == '-'}), và nhận diện đường dẫn chỉ định. Sau đó, gọi \texttt{stat(path, \&st)} để xác thực đường dẫn gốc trước khi kích hoạt hàm đệ quy \texttt{total = du(path)}.
+  \item \textbf{Hàm tính dung lượng đệ quy (\texttt{uint64 du(char *path)}):}
+  \begin{itemize}
+    \item \textbf{Xác định loại mục:} Dùng \texttt{stat(path, \&st)}. Nếu lỗi, in thông báo ra \texttt{stderr} và trả về $0$.
+    \item \textbf{Trường hợp tệp tin thường hoặc thiết bị (\texttt{T\_FILE || T\_DEVICE}):}
+    Nếu cờ \texttt{all\_files} bật và không ở chế độ \texttt{summary}, chương trình in kích thước tệp \texttt{printf("\%d\textbackslash t\%s\textbackslash n", (int)st.size, path)}. Hàm trả về kích thước \texttt{st.size} (tính theo byte).
+    \item \textbf{Trường hợp thư mục (\texttt{T\_DIR}):}
+    Khởi tạo biến tích lũy \texttt{uint64 total = 0}. Mở thư mục bằng \texttt{fd = open(path, O\_RDONLY)}. Kiểm tra giới hạn độ dài đường dẫn vào bộ đệm tĩnh: \texttt{strlen(path) + 1 + DIRSIZ + 1 > sizeof(buf)} (với \texttt{buf[256]}). Chuẩn bị chuỗi tiền tố với dấu \texttt{'/'}.
+    \item \textbf{Đọc và tích lũy từ các mục con:}
+    Vòng lặp \texttt{while (read(fd, \&de, sizeof(de)) == sizeof(de))}:
+    \begin{itemize}
+      \item Bỏ qua entry chưa dùng: \texttt{de.inum == 0}.
+      \item \textbf{Loại trừ liên kết tự thân và liên kết cha:} \texttt{strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0}.
+      \item Ghép tên mục con vào đường dẫn đầy đủ \texttt{buf}.
+      \item Gọi đệ quy \texttt{uint64 child\_size = du(buf)} và cộng dồn: \texttt{total += child\_size}.
+    \end{itemize}
+    \item Đóng thư mục \texttt{close(fd)}.
+    \item \textbf{In kết quả thư mục:} Nếu không bật cờ \texttt{summary}, in dung lượng tổng của thư mục hiện tại: \texttt{printf("\%d\textbackslash t\%s\textbackslash n", (int)total, path)}.
+    \item Trả về giá trị \texttt{total}.
+  \end{itemize}
+  \item \textbf{Xử lý in kết quả cấp cao (\texttt{main}):}
+  Nếu người dùng bật chế độ tóm tắt (\texttt{summary}), hàm \texttt{main} in dòng duy nhất \texttt{printf("\%d\textbackslash t\%s\textbackslash n", (int)total, path)}. Nếu đầu vào là một tệp đơn lẻ và không bật \texttt{-a}, \texttt{main} cũng in dòng kết quả của tệp đó.
+\end{enumerate}
 
-Các tùy chọn chỉ thay đổi phần kết quả được in, không thay đổi cách cộng dung lượng. Chế độ mặc định in tổng của từng thư mục; \texttt{-a} in thêm từng tệp, còn \texttt{-s} chỉ in tổng của đường dẫn được chọn. Trong bài này, dung lượng là tổng kích thước theo byte, không tính kích thước bản thân thư mục hay số khối đĩa thực tế sử dụng. Nhánh không truy cập được sẽ được báo lỗi và bỏ qua khi tính tổng.
-
-Cách tính dung lượng và cộng dồn kết quả từ các mục con được trình bày trong mã giả của hàm \texttt{du(path)} dưới đây.
+Mã giả của giải thuật tính dung lượng \texttt{du} được trình bày chi tiết dưới đây:
 
 \begin{algorithmblock}{\texttt{du}}
 \begin{algorithmcode}
 \textbf{PROCEDURE} Du(path)
-    Obtain information about path
-    \textbf{IF} information cannot be obtained \textbf{THEN}
-        \textbf{REPORT} error; \textbf{RETURN} 0
+    \textbf{IF} stat(path, &st) < 0 \textbf{THEN}
+        \textbf{PRINT\_ERR} "cannot stat ", path; \textbf{RETURN} 0
     \textbf{END IF}
-    \textbf{IF} path is a regular file or a device \textbf{THEN}
-        \textbf{IF} all-files mode is enabled and summary mode is off \textbf{THEN}
-            \textbf{OUTPUT} size in bytes and path
+    \textbf{IF} st.type == T_FILE OR st.type == T_DEVICE \textbf{THEN}
+        \textbf{IF} all_files AND NOT summary \textbf{THEN}
+            \textbf{PRINT} st.size, "\textbackslash t", path
         \textbf{END IF}
-        \textbf{RETURN} size in bytes
+        \textbf{RETURN} st.size
     \textbf{END IF}
-    \textbf{IF} path is not a directory \textbf{THEN}
-        \textbf{RETURN} 0
-    \textbf{END IF}
-    Open directory and check the allowed child-path length
-    \textbf{IF} opening or the length check fails \textbf{THEN}
-        Close directory if opened; report error; \textbf{RETURN} 0
-    \textbf{END IF}
-    total ← 0
-    \textbf{FOR EACH} entry read from directory \textbf{DO}
-        \textbf{IF} entry is unused, "." or ".." \textbf{THEN}
-            \textbf{CONTINUE}
+    \textbf{IF} st.type == T_DIR \textbf{THEN}
+        fd ← open(path, O_RDONLY)
+        \textbf{IF} fd < 0 OR strlen(path) + 1 + DIRSIZ + 1 > sizeof(buf) \textbf{THEN}
+            Close fd if opened; \textbf{RETURN} 0
         \textbf{END IF}
-        total ← total + Du(Join(path, entry.name))
-    \textbf{END FOR}
-    Close directory
-    \textbf{IF} summary mode is off \textbf{THEN}
-        \textbf{OUTPUT} total and path
+        total ← 0; Format buf with path and '/'
+        \textbf{WHILE} read(fd, &de, sizeof(de)) == sizeof(de) \textbf{DO}
+            \textbf{IF} de.inum == 0 OR de.name is "." OR ".." \textbf{THEN}
+                \textbf{CONTINUE}
+            \textbf{END IF}
+            Construct child path in buf
+            total ← total + Du(buf)
+        \textbf{END WHILE}
+        Close fd
+        \textbf{IF} NOT summary \textbf{THEN}
+            \textbf{PRINT} total, "\textbackslash t", path
+        \textbf{END IF}
+        \textbf{RETURN} total
     \textbf{END IF}
-    \textbf{RETURN} total
+    \textbf{RETURN} 0
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Duyệt hậu thứ tự chính xác:} Bảo đảm dung lượng của toàn bộ các tệp và thư mục con bên trong được tính toán đầy đủ trước khi in tổng dung lượng của thư mục cha.
+  \item \textbf{Phòng chống tràn số:} Khai báo biến tích lũy với kiểu dữ liệu số nguyên không dấu 64-bit (\texttt{uint64}), ngăn ngừa hiện tượng tràn số khi tổng kích thước tệp vượt quá giới hạn 32-bit.
+  \item \textbf{Giải phóng tài nguyên sớm:} Thư mục được đóng \texttt{close(fd)} ngay khi đọc xong các bản ghi, không giữ descriptor trong lúc in kết quả hoặc trả về, tránh cạn kiệt bảng \texttt{ofile}.
+\end{itemize}
 
 % --- 4.7. diff ---
 \subsection{\texttt{diff}}
 
-\textbf{Mục tiêu.}
+\textbf{Mục tiêu và đặc tả yêu cầu.}
 \begin{itemize}
-  \item \textbf{Chức năng:} So sánh nội dung của hai tệp theo từng dòng và xác định các vị trí khác biệt.
-  \item \textbf{Tham số:} Nhận hai tệp bắt buộc \texttt{file1}, \texttt{file2} và tùy chọn \texttt{-q} theo cú pháp \texttt{diff file1 file2 [-q]}.
-  \item \textbf{Đầu ra:} Ở chế độ thông thường, chỉ ra các dòng khác biệt của từng tệp; với \texttt{-q}, chỉ thông báo hai tệp có khác nhau hay không.
+  \item \textbf{Chức năng:} So sánh nội dung của hai tệp tin theo từng dòng (\textit{line-by-line comparison}) và xác định các vị trí xuất hiện sự sai khác.
+  \item \textbf{Cú pháp và tham số:} Hỗ trợ hai dạng cú pháp linh hoạt: \texttt{diff file1 file2 [-q]} hoặc \texttt{diff -q file1 file2}, trong đó:
+  \begin{itemize}
+    \item \texttt{file1}, \texttt{file2}: Hai đường dẫn tệp tin thường cần so sánh nội dung. Chương trình yêu cầu tên tệp không bắt đầu bằng ký tự \texttt{'-'} (nếu có phải dùng tiền tố \texttt{./-file}) để tránh nhầm lẫn với cờ tùy chọn.
+    \item \texttt{-q}: Chế độ im lặng (\textit{quiet mode}), chỉ thông báo hai tệp có khác nhau hay không mà không in chi tiết nội dung từng dòng sai lệch.
+  \end{itemize}
+  \item \textbf{Quy ước mã thoát (\textit{Exit Status}):} Tuân thủ nghiêm ngặt chuẩn của bài thực hành:
+  \begin{itemize}
+    \item Mã $0$: Hai tệp có nội dung hoàn toàn giống nhau (\textit{identical}).
+    \item Mã $1$: Hai tệp có sự khác biệt về nội dung (\textit{different}).
+    \item Mã $2$: Lỗi hệ thống hoặc lỗi thực thi (\textit{error}), bao gồm sai cú pháp dòng lệnh, không mở được tệp, tệp không phải dạng tệp thông thường (\texttt{T\_FILE}), lỗi I/O khi đọc/ghi hoặc cạn kiệt bộ nhớ heap.
+  \end{itemize}
+  \item \textbf{Định dạng xuất kết quả:}
+  \begin{itemize}
+    \item Ở chế độ thông thường, với mỗi vị trí khác biệt tại dòng thứ $N$, chương trình in hai dòng đối chiếu:
+    \begin{quote}
+      \texttt{<file1>:<N>: < <nội\_dung\_1>}\\
+      \texttt{<file2>:<N>: > <nội\_dung\_2>}
+    \end{quote}
+    Nếu một tệp kết thúc trước tệp còn lại, dòng tương ứng của tệp đó được gán nhãn \texttt{EOF}. Nếu dòng cuối cùng của tệp không kết thúc bằng ký tự xuống dòng (\texttt{\textbackslash n}), chương trình xuất cảnh báo chuẩn \texttt{\textbackslash\ No newline at end of file}.
+    \item Ở chế độ \texttt{-q}, khi phát hiện điểm khác biệt đầu tiên, chương trình chỉ in duy nhất thông báo \texttt{"diff: files differ\textbackslash n"} rồi lập tức kết thúc.
+  \end{itemize}
 \end{itemize}
 
-\textbf{Kiến thức sử dụng.}
-\begin{itemize}
-  \item \textbf{So sánh theo vị trí:} Hai dòng được đối chiếu khi có cùng số thứ tự trong hai tệp. Đây là phép so sánh từng cặp, không tìm cách ghép lại các dòng tương ứng khi có chèn hoặc xóa nội dung.
-  \item \textbf{Dòng trống, EOF và dấu xuống dòng:} Dòng trống vẫn là một dòng, còn EOF cho biết không còn dữ liệu để đọc. Dấu xuống dòng cũng là một phần cần kiểm tra, vì dòng cuối có thể kết thúc ngay tại EOF mà không có dấu này.
-  \item \textbf{Bộ đệm động:} Độ dài dòng không biết trước, nên vùng nhớ chứa dòng cần được mở rộng khi chưa đủ chỗ. Theo dõi số byte thực tế giúp giữ đủ nội dung, kể cả khi có byte 0 nằm giữa dòng; vùng nhớ được giải phóng sau khi sử dụng.
-\end{itemize}
+\textbf{Thiết kế kỹ thuật và cài đặt chi tiết.}
 
-\textbf{Ý tưởng triển khai.}
-Hai tệp được đọc song song và so sánh các dòng có cùng số thứ tự. Ngoài nội dung, chương trình kiểm tra độ dài và dấu xuống dòng, đồng thời phân biệt dòng trống với trường hợp tệp đã hết dữ liệu. Do đó, hai dòng có cùng phần chữ nhưng khác dấu xuống dòng cuối tệp vẫn được xem là khác nhau. Bộ đệm được mở rộng theo độ dài dòng để không cắt mất phần nội dung cần so sánh.
+Chương trình được hiện thực tại \path{user/diff.c}. Điểm thách thức lớn nhất trong môi trường xv6 là hệ điều hành không cung cấp sẵn thư viện đệm dòng tiêu chuẩn như \texttt{getline()} hay \texttt{fgets()} trong libc của Linux. Nhóm đã tự thiết kế cấu trúc quản lý dòng động và cơ chế đọc/so sánh nhị phân an toàn:
+\begin{enumerate}
+  \item \textbf{Cấu trúc dòng động (\texttt{struct line}):}
+  Bao gồm bốn trường quản lý:
+  \begin{itemize}
+    \item \texttt{char *data}: Con trỏ trỏ đến vùng nhớ đệm chứa chuỗi ký tự trên heap.
+    \item \texttt{int len}: Độ dài thực tế tính theo byte của dòng. Việc lưu trữ \texttt{len} tường minh cho phép chương trình xử lý an toàn cả các tệp nhị phân có chứa byte \texttt{'\textbackslash 0'} mà không bị ngắt chuỗi sớm.
+    \item \texttt{int capacity}: Dung lượng tối đa hiện tại của vùng đệm đã cấp phát.
+    \item \texttt{int has\_newline}: Cờ đánh dấu dòng có ký tự kết thúc \texttt{'\textbackslash n'} hay kết thúc đột ngột tại cuối tệp (\texttt{EOF}).
+  \end{itemize}
+  \item \textbf{Hàm đọc dòng tự mở rộng bộ đệm (\texttt{readline}):}
+  \begin{itemize}
+    \item Khởi tạo bộ đệm ban đầu với kích thước 128 byte thông qua \texttt{malloc(128)}.
+    \item Đọc tuần tự từng byte một từ tệp bằng \texttt{read(fd, \&c, 1)}.
+    \item Khi số byte tích lũy đạt ngưỡng giới hạn (\texttt{line->len + 1 >= line->capacity}), chương trình thực hiện nhân đôi dung lượng đệm (\texttt{capacity = line->capacity * 2}), cấp phát vùng nhớ mới, sao chép dữ liệu cũ qua \texttt{memmove}, giải phóng bộ nhớ cũ \texttt{free(line->data)} và cập nhật con trỏ. Kỹ thuật này bảo đảm chương trình đọc được những dòng có độ dài tùy ý mà không làm tràn bộ đệm hay giới hạn độ dài dòng cố định.
+    \item Khi gặp ký tự \texttt{'\textbackslash n'}, gán \texttt{has\_newline = 1} và trả về $1$. Nếu gặp \texttt{EOF} khi chưa đọc được byte nào, trả về $0$. Nếu gặp \texttt{EOF} khi đã có dữ liệu (dòng cuối thiếu ký tự xuống dòng), trả về $1$ nhưng giữ \texttt{has\_newline = 0}.
+  \end{itemize}
+  \item \textbf{Hàm xuất dòng an toàn (\texttt{printline}):}
+  In tiền tố \texttt{"\%s:\%d: \%s "} chứa đường dẫn, số thứ tự dòng và ký hiệu đánh dấu (\texttt{<} hoặc \texttt{>}). Nếu tệp đã hết dữ liệu (\texttt{!present}), in chuỗi \texttt{"EOF\textbackslash n"}. Ngược lại, hàm dùng vòng lặp gọi trực tiếp \texttt{write(1, line->data + written, ...)} dựa trên trường \texttt{len} thay vì dùng \texttt{printf("\%s")} để bảo toàn trọn vẹn mọi byte dữ liệu (kể cả byte null). Sau đó, in ký tự xuống dòng và in thêm cảnh báo \texttt{"\textbackslash\textbackslash\ No newline at end of file\textbackslash n"} nếu cờ \texttt{has\_newline} không được bật.
+  \item \textbf{Vòng lặp đối chiếu và điều phối (\texttt{main}):}
+  \begin{itemize}
+    \item \textbf{Xác thực tệp tin:} Sau khi mở hai tệp (\texttt{open}), chương trình sử dụng \texttt{fstat} để kiểm tra loại tệp. Nếu một trong hai không phải là tệp thường (\texttt{st.type != T\_FILE}), chương trình báo lỗi \texttt{"diff: inputs must be regular files\textbackslash n"} và thoát với mã $2$.
+    \item \textbf{So sánh song song từng cặp dòng:} Duyệt biến đếm dòng \texttt{number} từ $1$. Tại mỗi bước, gọi đồng thời \texttt{readline(fd1, \&line1)} và \texttt{readline(fd2, \&line2)}. Vòng lặp dừng khi cả hai tệp cùng chạm \texttt{EOF} (\texttt{has1 == 0 \&\& has2 == 0}).
+    \item \textbf{Điều kiện xác định sai khác:} Hai dòng được coi là khác nhau nếu thỏa mãn một trong các điều kiện:
+    \begin{itemize}
+      \item Một tệp còn dòng trong khi tệp kia đã hết (\texttt{has1 != has2}).
+      \item Độ dài byte của hai dòng không bằng nhau (\texttt{line1.len != line2.len}).
+      \item Trạng thái ký tự kết thúc dòng khác nhau (\texttt{line1.has\_newline != line2.has\_newline}).
+      \item So sánh nội dung byte qua \texttt{memcmp(line1.data, line2.data, line1.len) != 0}.
+    \end{itemize}
+    \item Khi phát hiện khác biệt, gán \texttt{status = 1}. Nếu ở chế độ \texttt{quiet}, in thông báo \texttt{"diff: files differ\textbackslash n"} và ngắt vòng lặp. Nếu ở chế độ thường, gọi \texttt{printline} để in chi tiết cả hai phía.
+    \item \textbf{Thu dọn tài nguyên tại nhãn \texttt{done}:} Giải phóng toàn bộ vùng đệm heap (\texttt{free(line1.data)}, \texttt{free(line2.data)}), đóng các file descriptor (\texttt{close(fd1)}, \texttt{close(fd2)}) và kết thúc với \texttt{exit(status)}.
+  \end{itemize}
+\end{enumerate}
 
-Với mỗi khác biệt, kết quả ghi tên tệp, số dòng và nội dung của hai phía. Nếu một tệp kết thúc trước, các dòng còn lại ở tệp kia được đối chiếu với trạng thái hết tệp. Khi có \texttt{-q}, chương trình dừng ở khác biệt đầu tiên và chỉ in thông báo. Phép so sánh trong bài không căn chỉnh lại dòng khi có chèn hoặc xóa: một dòng thêm vào giữa tệp có thể khiến nhiều cặp dòng phía sau được báo khác nhau.
-
-Mã giả dưới đây mô tả quy trình so sánh trong hàm \texttt{main()}, từ việc đọc từng cặp dòng đến ghi nhận và hiển thị khác biệt.
+Mã giả dưới đây khái quát logic so sánh hai tệp tin của chương trình \texttt{diff}:
 
 \begin{algorithmblock}{\texttt{diff}}
 \begin{algorithmcode}
 \textbf{PROCEDURE} Main(arguments)
-    Parse two paths and optional quiet flag at either end
-    Reject invalid syntax or paths beginning with a hyphen
-    Open both files and verify that they are regular files
-    On a setup failure, close opened files and exit 2
-    status ← 0; number ← 1
+    Parse file paths path1, path2 and optional flag -q
+    \textbf{IF} syntax invalid OR path starts with '-' \textbf{THEN}
+        \textbf{PRINT\_ERR} usage message; \textbf{EXIT} 2
+    \textbf{END IF}
+    Open fd1 and fd2; Verify both are T_FILE using fstat
+    \textbf{IF} open or stat fails \textbf{THEN}
+        \textbf{PRINT\_ERR} error message; Clean up; \textbf{EXIT} 2
+    \textbf{END IF}
+    status ← 0; number ← 1; Initialize line1, line2
     \textbf{LOOP}
-        first ← ReadLine(firstFile)
-        second ← ReadLine(secondFile)
-        \textbf{IF} either line could not be read \textbf{THEN}
-            \textbf{REPORT} error; status ← 2; \textbf{BREAK}
+        has1 ← ReadLine(fd1, line1)
+        has2 ← ReadLine(fd2, line2)
+        \textbf{IF} has1 < 0 OR has2 < 0 \textbf{THEN}
+            \textbf{PRINT\_ERR} "diff: read error or out of memory"
+            status ← 2; \textbf{BREAK}
         \textbf{END IF}
-        \textbf{IF} neither file has another line \textbf{THEN}
+        \textbf{IF} has1 == 0 AND has2 == 0 \textbf{THEN}
             \textbf{BREAK}
         \textbf{END IF}
-        \textbf{IF} presence, length, newline or contents differ \textbf{THEN}
+        differs ← (has1 != has2) OR (line1.len != line2.len) OR
+                  (line1.has_newline != line2.has_newline) OR
+                  (memcmp(line1.data, line2.data, line1.len) != 0)
+        \textbf{IF} differs \textbf{THEN}
             status ← 1
-            \textbf{IF} quiet mode is enabled \textbf{THEN}
-                \textbf{OUTPUT} "diff: files differ"; \textbf{BREAK}
+            \textbf{IF} quiet \textbf{THEN}
+                \textbf{PRINT} "diff: files differ"
+                \textbf{BREAK}
             \textbf{END IF}
-            PrintLine(firstFile, number, first)
-            PrintLine(secondFile, number, second)
-            \textbf{IF} either output operation fails \textbf{THEN}
-                \textbf{REPORT} error; status ← 2; \textbf{BREAK}
-            \textbf{END IF}
+            PrintLine(path1, number, "<", has1, line1)
+            PrintLine(path2, number, ">", has2, line2)
         \textbf{END IF}
         number ← number + 1
     \textbf{END LOOP}
-    Release stored lines and close both files
+    Free line1.data and line2.data; Close fd1 and fd2
     \textbf{EXIT} status
 \textbf{END PROCEDURE}
 \end{algorithmcode}
 \end{algorithmblock}
+
+\textbf{Xử lý edge case và an toàn tài nguyên.}
+\begin{itemize}
+  \item \textbf{Xử lý tệp rỗng và tệp có độ dài lệch nhau:} Khi một tệp rỗng hoặc có số dòng ít hơn, biến \texttt{has} tương ứng trả về $0$. Hàm \texttt{printline} nhận diện \texttt{!present} và in nhãn \texttt{EOF}, bảo đảm đối chiếu trực quan chính xác giữa phần dữ liệu thừa của tệp dài hơn và trạng thái kết thúc của tệp ngắn hơn.
+  \item \textbf{Phân biệt ký tự xuống dòng ở cuối tệp:} Nhờ cờ \texttt{has\_newline}, chương trình phân biệt chuẩn xác trường hợp hai dòng có cùng chuỗi ký tự nhưng một bên có \texttt{'\textbackslash n'} còn bên kia kết thúc ngay tại \texttt{EOF}, đồng thời in cảnh báo chuẩn POSIX \texttt{"\textbackslash\ No newline at end of file"}.
+  \item \textbf{An toàn với dữ liệu nhị phân:} Bằng cách lưu trường \texttt{len} tường minh, dùng \texttt{memcmp} để so khớp nội dung và dùng trực tiếp lời gọi hệ thống \texttt{write(1, data, len)} thay vì \texttt{printf("\%s")}, giải thuật không bị ngắt quãng bởi các byte null (\texttt{'\textbackslash 0'}) lồng bên trong tệp.
+  \item \textbf{Quản lý bộ nhớ và bộ mô tả tệp chặt chẽ:} Cấu trúc nhãn thu dọn \texttt{done:} bảo đảm vùng nhớ cấp phát động trên heap (\texttt{malloc}) luôn được giải phóng và các file descriptor luôn được đóng trước khi tiến trình kết thúc, ngăn ngừa rò rỉ tài nguyên hệ thống kể cả khi gặp lỗi bất thường giữa chừng.
+\end{itemize}
 
 % -------------------------------------------------------------------------
 % PHẦN 5: KẾT QUẢ KIỂM THỬ TỔNG HỢP
@@ -1261,7 +1446,4 @@ Qua bài thực hành Lab 01, nhóm đã hoàn thiện toàn diện các kỹ n�
   \url{https://formulae.brew.sh/formula/qemu}.
 \end{enumerate}
 \endgroup
-
-Các tài liệu GNU được dùng để tham khảo hành vi của tiện ích Unix; các chương trình trong bài chỉ thực hiện phạm vi yêu cầu của Lab 01, không có đầy đủ tính năng của phiên bản GNU.
-
 \end{document}
